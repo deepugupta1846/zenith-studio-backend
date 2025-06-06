@@ -1,6 +1,10 @@
-// controllers/orderController.js
-
 import Order from "../models/Order.js";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Create new order
 export const createOrder = async (req, res) => {
@@ -27,8 +31,11 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Please fill in all required fields" });
     }
 
-    // Collect file paths
-    const uploadedFiles = req.files.map((file) => `/uploads/${file.filename}`);
+    // Collect file paths with full folder name
+
+      const uploadedFiles = req.files?.map((file) =>
+  `/uploads/${path.relative(path.join(__dirname, "uploads"), file.path).replace(/\\/g, "/")}`
+) || [];
 
     const order = await Order.create({
       albumName,
@@ -43,14 +50,14 @@ export const createOrder = async (req, res) => {
       paymentMethod,
       advancePercent,
       notes,
-      email: email,
-      mobileNumber: mobileNumber,
+      email,
+      mobileNumber,
       uploadedFiles,
     });
 
     res.status(201).json(order);
   } catch (err) {
-    console.error("Order creation failed", err);
+    console.error("Order creation failed:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

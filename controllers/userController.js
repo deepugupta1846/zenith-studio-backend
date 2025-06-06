@@ -19,19 +19,14 @@ export const registerUser = async (req, res) => {
     name,
     email,
     password,
-    confirmPassword,
     otp,
     licenseKey,
     userType, // optional
     active,   // optional
   } = req.body;
 
-  if (!name || !email || !password || !confirmPassword || !otp) {
+  if (!name || !email || !password || !password || !otp) {
     return res.status(400).json({ message: "All fields are required" });
-  }
-
-  if (password !== confirmPassword) {
-    return res.status(400).json({ message: "Passwords do not match" });
   }
 
   try {
@@ -51,7 +46,7 @@ export const registerUser = async (req, res) => {
       password,
       licenseKey: licenseKey || "",
       userType: userType || "user",
-      active: active !== undefined ? active : true,
+      active: false,
     });
 
     delete otps[email];
@@ -80,21 +75,32 @@ export const loginUser = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: generateToken(user),
-      });
-    } else {
-      res.status(401).json({ message: "Invalid email or password" });
+
+    if (user) {
+      // Check if account is active
+      if (!user.active) {
+        return res.status(403).json({ message: "User not activated" });
+      }
+
+      // Check password
+      const isMatch = await user.matchPassword(password);
+      if (isMatch) {
+        return res.json({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          token: generateToken(user),
+        });
+      }
     }
+
+    res.status(401).json({ message: "Invalid email or password" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // @desc    Check if email exists
 // @route   GET /api/auth/check-email?email=xxx
