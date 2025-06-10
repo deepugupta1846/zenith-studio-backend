@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import { v4 as uuidv4 } from "uuid";
 
 const otps = {}; // { email: { otp, expiresAt } }
 
@@ -23,9 +24,11 @@ export const registerUser = async (req, res) => {
     licenseKey,
     userType, // optional
     active,   // optional
+    mobileNumber,
+    shopName
   } = req.body;
 
-  if (!name || !email || !password || !password || !otp) {
+  if (!name || !email || !mobileNumber || !password || !password || !otp) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -43,18 +46,25 @@ export const registerUser = async (req, res) => {
     const user = await User.create({
       name,
       email,
+      mobileNumber,
       password,
       licenseKey: licenseKey || "",
       userType: userType || "user",
       active: false,
+      shopName
     });
 
     delete otps[email];
+
+    if (user.userType === "Professional") {
+      await sendAdminVerificationEmail(user);
+    }
 
     res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
+      mobileNumber: mobileNumber,
       licenseKey: user.licenseKey,
       userType: user.userType,
       active: user.active,
@@ -148,4 +158,103 @@ export const sendOtp = async (req, res) => {
     console.error("Failed to send OTP:", err);
     res.status(500).json({ message: "Failed to send OTP" });
   }
+};
+
+// @desc    Verify professional user and activate account
+// @route   GET /api/auth/verify-user/:token
+// @access  Public
+export const verifyUser = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update license key and activate user
+    user.licenseKey = uuidv4();
+    user.active = true;
+    await user.save();
+
+    res.status(200).json({
+      message: "User verified successfully",
+      licenseKey: user.licenseKey,
+      userId: user._id,
+    });
+  } catch (error) {
+    console.error("Verification failed:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const sendAdminVerificationEmail = async (user) => {
+  const adminEmail = process.env.ADMIN_EMAIL;
+
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS,
+    },
+  });
+
+
+const html = `
+  <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 30px; background-color: #f9f9f9; border: 1px solid #e2e2e2; border-radius: 8px;">
+    <h2 style="color: #ce181e; border-bottom: 2px solid #ce181e; padding-bottom: 10px;">🔔 New Professional User Registration</h2>
+    
+    <p style="font-size: 16px; color: #333; margin-top: 20px;">
+      A new <strong>professional</strong> user has registered. Please review their details below and verify the account.
+    </p>
+
+    <table style="width: 100%; margin-top: 20px; font-size: 15px; color: #444;">
+      <tr>
+        <td style="padding: 8px 0;"><strong>Name:</strong></td>
+        <td style="padding: 8px 0;">${user.name}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0;"><strong>Email:</strong></td>
+        <td style="padding: 8px 0;">${user.email}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0;"><strong>Mobile:</strong></td>
+        <td style="padding: 8px 0;">${user.mobileNumber}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0;"><strong>Shop Name:</strong></td>
+        <td style="padding: 8px 0;">${user.shopName}</td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="http://localhost:5173/activate/?userid=${user._id}" style="
+        display: inline-block;
+        padding: 12px 25px;
+        background-color: #ce181e;
+        color: #fff;
+        text-decoration: none;
+        font-weight: bold;
+        border-radius: 6px;
+        font-size: 16px;
+      ">✅ Verify User</a>
+    </div>
+
+    <p style="margin-top: 40px; font-size: 13px; color: #999; text-align: center;">
+      This is an automated message. Please do not reply to this email.
+    </p>
+  </div>
+`;
+
+
+  await transporter.sendMail({
+    from: `"Zenith Admin" <${process.env.EMAIL_USER}>`,
+    to: adminEmail,
+    subject: "New Professional User Verification Needed",
+    html,
+  });
 };

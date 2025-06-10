@@ -9,7 +9,8 @@ import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-import upload from "./middlewares/uploadMiddleware.js";
+import {upload} from "./middlewares/uploadMiddleware.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 // Config
 dotenv.config();
@@ -42,6 +43,7 @@ app.post("/api/upload", upload.array("albumFiles", 100), (req, res) => {
 // Routes
 app.use("/api/orders", orderRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // Start server
 app.listen(PORT, () => {

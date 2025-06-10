@@ -11,6 +11,11 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  mobileNumber: {
+    type: String,
+    required: true,
+    unique: true,
+  },
   password: {
     type: String,
     required: true,
@@ -21,8 +26,12 @@ const userSchema = new mongoose.Schema({
   },
   userType: {
     type: String,
-    enum: ["user", "admin", "retailer", "distributor"],
+    enum: ["user", "admin", "retailer", "Professional"],
     default: "user",
+  },
+  shopName: {
+    type: String,
+    default: "",
   },
   active: {
     type: Boolean,

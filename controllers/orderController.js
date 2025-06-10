@@ -2,6 +2,7 @@ import Order from "../models/Order.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import archiver from "archiver";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,7 +56,19 @@ export const createOrder = async (req, res) => {
       uploadedFiles,
     });
 
-    res.status(201).json(order);
+     // Calculate payment amount dynamically if needed
+    const amount = 500; // Example: ₹500 → calculate dynamically
+
+    res.status(201).json({
+      order,
+      paymentRedirect: "/api/payment/create-order", // Where to POST payment details from frontend
+      suggestedPaymentDetails: {
+        amount,
+        currency: "INR",
+        receipt: `receipt_order_${order.orderNo}`,
+        notes: { albumName: order.albumName, orderNo: order.orderNo },
+      },
+    });
   } catch (err) {
     console.error("Order creation failed:", err);
     res.status(500).json({ message: "Server error" });
@@ -106,3 +119,5 @@ export const deleteOrder = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+
