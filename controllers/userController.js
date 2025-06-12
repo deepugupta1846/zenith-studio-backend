@@ -99,6 +99,7 @@ export const loginUser = async (req, res) => {
           _id: user._id,
           name: user.name,
           email: user.email,
+          userType: user.userType,
           token: generateToken(user),
         });
       }
@@ -257,4 +258,32 @@ const html = `
     subject: "New Professional User Verification Needed",
     html,
   });
+};
+
+
+// @desc    Get logged-in user details
+// @route   GET /api/auth/profile
+// @access  Private (Protected)
+export const getUserDetails = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { _id, name, email, mobileNumber, shopName, licenseKey, userType, active } = req.user;
+
+    res.status(200).json({
+      _id,
+      name,
+      email,
+      mobileNumber,
+      shopName,
+      licenseKey,
+      userType,
+      active,
+    });
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };

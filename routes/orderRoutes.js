@@ -5,6 +5,7 @@ import {
   getOrderById,
   updateOrder,
   deleteOrder,
+  getOrderByUser,
 } from "../controllers/orderController.js";
 import {downloadOrderFiles, upload} from "../middlewares/uploadMiddleware.js";
 
@@ -16,6 +17,7 @@ router.get("/", getAllOrders);
 router.get("/:id", getOrderById);
 router.put("/:id", updateOrder);
 router.delete("/:id", deleteOrder);
+router.delete("/user", getOrderByUser);
 router.get("/download/:orderNo", downloadOrderFiles);
 
 export default router;

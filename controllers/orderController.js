@@ -59,16 +59,16 @@ export const createOrder = async (req, res) => {
      // Calculate payment amount dynamically if needed
     const amount = 500; // Example: ₹500 → calculate dynamically
 
-    res.status(201).json({
-      order,
-      paymentRedirect: "/api/payment/create-order", // Where to POST payment details from frontend
-      suggestedPaymentDetails: {
-        amount,
-        currency: "INR",
-        receipt: `receipt_order_${order.orderNo}`,
-        notes: { albumName: order.albumName, orderNo: order.orderNo },
-      },
-    });
+    // res.status(201).json({
+    //   order,
+    //   paymentRedirect: "/api/payment/create-order", // Where to POST payment details from frontend
+    //   suggestedPaymentDetails: {
+    //     amount,
+    //     currency: "INR",
+    //     receipt: `receipt_order_${order.orderNo}`,
+    //     notes: { albumName: order.albumName, orderNo: order.orderNo },
+    //   },
+    // });
   } catch (err) {
     console.error("Order creation failed:", err);
     res.status(500).json({ message: "Server error" });
@@ -95,6 +95,18 @@ export const getOrderById = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+// Get order by ID
+export const getOrderByUser = async (req, res) => {
+  try {
+    const order = await Order.find({email: req.body.email});
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    res.status(200).json({ success: true, order });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 
 // Update order
 export const updateOrder = async (req, res) => {
