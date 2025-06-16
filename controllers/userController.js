@@ -251,7 +251,6 @@ const html = `
   </div>
 `;
 
-
   await transporter.sendMail({
     from: `"Zenith Admin" <${process.env.EMAIL_USER}>`,
     to: adminEmail,
