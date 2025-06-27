@@ -41,6 +41,10 @@ app.post("/api/upload", upload.array("albumFiles", 100), (req, res) => {
   res.status(200).json({ files: filePaths });
 });
 
+app.get("/", (req, res) => {
+  res.send("Hello from Node.js on Vercel!");
+});
+
 // Routes
 app.use("/api/orders", orderRoutes);
 app.use("/api/auth", authRoutes);
