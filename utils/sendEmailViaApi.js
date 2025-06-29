@@ -8,7 +8,7 @@ const test = process.env.JWT_SECRET;
 console.log("JWT_SECRET =", test);
 
 // Debug: Log environment variables (be cautious in production)
-console.log("EMAIL_API_URL =", EMAIL_API_URL);
+console.log("EMAIL_API_URL =", API_KEY);
 console.log("EMAIL_API_KEY =", API_KEY ? '[REDACTED]' : 'Not Set'); // Optional: log value only if needed
 /**
  * Sends email via PHP API (supports PDF attachment).
