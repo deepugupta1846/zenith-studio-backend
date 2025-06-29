@@ -42,7 +42,7 @@ app.post("/api/upload", upload.array("albumFiles", 100), (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Welcome to the zenith server!");
+  res.send("Welcome to the zenith studio server");
 });
 
 // Routes
