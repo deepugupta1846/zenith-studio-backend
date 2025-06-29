@@ -3,6 +3,10 @@ import axios from 'axios';
 const EMAIL_API_URL = process.env.EMAIL_API_URL || 'https://techvestors.in/api/SMTP/send.php';
 const API_KEY = process.env.EMAIL_API_KEY;
 
+// Debug: Log environment variables (be cautious in production)
+console.log("EMAIL_API_URL =", EMAIL_API_URL);
+console.log("EMAIL_API_KEY =", API_KEY ? '[REDACTED]' : 'Not Set'); // Optional: log value only if needed
+
 /**
  * Sends email via PHP API (supports PDF attachment).
  * 
@@ -36,7 +40,17 @@ export const sendEmailViaApi = async ({
 
     if (attachment instanceof File) {
       formData.append('attachment', attachment);
+      console.log("Attachment added:", attachment.name);
     }
+
+    console.log("Sending email via API with payload:", {
+      to,
+      subject,
+      type,
+      from,
+      reply_to,
+      hasAttachment: !!attachment
+    });
 
     const response = await axios.post(EMAIL_API_URL, formData, {
       headers: {
@@ -44,6 +58,7 @@ export const sendEmailViaApi = async ({
       }
     });
 
+    console.log("Email API response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Email API Error:", error.response?.data || error.message);
