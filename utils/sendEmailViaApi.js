@@ -1,17 +1,10 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
-dotenv.config(); // Load env vars before you use them
+dotenv.config(); // Ensure .env variables are loaded if not already
 
-console.log("===");
 const EMAIL_API_URL = process.env.EMAIL_API_URL;
 const API_KEY = process.env.EMAIL_API_KEY;
-console.log("JWT_SECRET =", process.env.JWT_SECRET);
-const test = process.env.JWT_SECRET;
-console.log("JWT_SECRET =", test);
 
-// Debug: Log environment variables (be cautious in production)
-console.log("EMAIL_API_URL =", API_KEY);
-console.log("EMAIL_API_KEY =", API_KEY ? '[REDACTED]' : 'Not Set'); // Optional: log value only if needed
 /**
  * Sends email via PHP API (supports PDF attachment).
  * 
@@ -45,17 +38,7 @@ export const sendEmailViaApi = async ({
 
     if (attachment instanceof File) {
       formData.append('attachment', attachment);
-      console.log("Attachment added:", attachment.name);
     }
-
-    console.log("Sending email via API with payload:", {
-      to,
-      subject,
-      type,
-      from,
-      reply_to,
-      hasAttachment: !!attachment
-    });
 
     const response = await axios.post(EMAIL_API_URL, formData, {
       headers: {
@@ -63,10 +46,9 @@ export const sendEmailViaApi = async ({
       }
     });
 
-    console.log("Email API response:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Email API Error:", error.response?.data || error.message);
+    console.error("❌ Email API Error:", error.response?.data || error.message);
     throw new Error("Failed to send email via PHP API");
   }
 };
