@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const EMAIL_API_URL = process.env.EMAIL_API_URL;
 const API_KEY = process.env.EMAIL_API_KEY;
-const test = process.env.JWT_SECRET';
+const test = process.env.JWT_SECRET;
 
 // Debug: Log environment variables (be cautious in production)
 console.log("EMAIL_API_URL =", EMAIL_API_URL);
