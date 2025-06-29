@@ -1,4 +1,6 @@
 import axios from 'axios';
+import dotenv from 'dotenv';
+dotenv.config(); // Load env vars before you use them
 
 console.log("===");
 const EMAIL_API_URL = process.env.EMAIL_API_URL;
