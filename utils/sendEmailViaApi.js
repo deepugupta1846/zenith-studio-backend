@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const EMAIL_API_URL = process.env.EMAIL_API_URL || 'https://techvestors.in/api/SMTP/send.php';
-const API_KEY = process.env.EMAIL_API_KEY;
+const EMAIL_API_URL = import.meta.env.VITE_EMAIL_API_URL;
+const API_KEY = import.meta.env.VITE_EMAIL_API_KEY;
 
 // Debug: Log environment variables (be cautious in production)
 console.log("EMAIL_API_URL =", EMAIL_API_URL);
