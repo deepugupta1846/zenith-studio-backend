@@ -1,14 +1,15 @@
 import axios from 'axios';
 
+console.log("===");
 const EMAIL_API_URL = process.env.EMAIL_API_URL;
 const API_KEY = process.env.EMAIL_API_KEY;
+console.log("JWT_SECRET =", process.env.JWT_SECRET);
 const test = process.env.JWT_SECRET;
+console.log("JWT_SECRET =", test);
 
 // Debug: Log environment variables (be cautious in production)
 console.log("EMAIL_API_URL =", EMAIL_API_URL);
 console.log("EMAIL_API_KEY =", API_KEY ? '[REDACTED]' : 'Not Set'); // Optional: log value only if needed
-console.log("JWT_SECRET =", test);
-console.log("JWT_SECRET =", process.env.JWT_SECRET);
 /**
  * Sends email via PHP API (supports PDF attachment).
  * 
