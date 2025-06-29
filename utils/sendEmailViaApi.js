@@ -44,7 +44,6 @@ export const sendEmailViaApi = async ({
     }
 
     console.log("Sending email via API with payload:", {
-      API_KEY,
       to,
       subject,
       type,
