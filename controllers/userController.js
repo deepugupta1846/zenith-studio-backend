@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
+import { sendEmailViaApi } from "../utils/sendEmailViaApi.js";
 
 const otps = {}; // { email: { otp, expiresAt } }
 
@@ -128,7 +129,7 @@ export const checkEmail = async (req, res) => {
 
 // @desc    Send OTP to email
 // @route   POST /api/auth/send-otp
-export const sendOtp = async (req, res) => {
+export const old_sendOtp = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required" });
 
@@ -157,6 +158,35 @@ export const sendOtp = async (req, res) => {
     res.json({ message: "OTP sent" });
   } catch (err) {
     console.error("Failed to send OTP:", err);
+    res.status(500).json({ message: "Failed to send OTP" });
+  }
+};
+
+// @desc    Send OTP to email
+// @route   POST /api/auth/send-otp
+export const sendOtp = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) return res.status(400).json({ message: "Email is required" });
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  otps[email] = { otp, expiresAt };
+
+  const htmlContent = `<p>Your OTP is <strong>${otp}</strong>. It is valid for 10 minutes.</p>`;
+
+  try {
+    await sendEmailViaApi({
+      to: email,
+      subject: "Your Zenith Studio OTP",
+      message: htmlContent,
+      type: "otp"
+    });
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (err) {
+    console.error("Failed to send OTP:", err.message);
     res.status(500).json({ message: "Failed to send OTP" });
   }
 };
