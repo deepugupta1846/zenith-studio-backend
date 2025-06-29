@@ -1,0 +1,42 @@
+name: Deploy Zenith Backend to VPS
+
+on:
+  push:
+    branches:
+      - staging
+      - main
+      - master
+
+jobs:
+  deploy_zenith_backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Connect with VPS and Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            # Set deployment directory
+            mkdir -p /home/zenith/app/backend
+            cd /home/zenith/app/backend
+
+            # If .git exists, pull latest code; else clone
+            if [ -d ".git" ]; then
+              git reset --hard
+              git pull origin main
+            else
+              git clone -b main git@github.com:deepugupta1846/zenith-studio-backend.git .
+            fi
+
+            # Install dependencies
+            npm install --force
+
+            # Start/reload app with PM2
+            pm2 reload zenith-backend || pm2 start npm --name "zenith-backend" -- start
+            pm2 save
