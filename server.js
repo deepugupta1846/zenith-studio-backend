@@ -42,7 +42,7 @@ app.post("/api/upload", upload.array("albumFiles", 100), (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Hello from Node.js on Vercel!");
+  res.send("Welcome to the zenith server!");
 });
 
 // Routes
