@@ -235,58 +235,70 @@ const sendAdminVerificationEmail = async (user) => {
   });
 
 
-const html = `
-  <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 30px; background-color: #f9f9f9; border: 1px solid #e2e2e2; border-radius: 8px;">
-    <h2 style="color: #ce181e; border-bottom: 2px solid #ce181e; padding-bottom: 10px;">🔔 New Professional User Registration</h2>
-    
-    <p style="font-size: 16px; color: #333; margin-top: 20px;">
-      A new <strong>professional</strong> user has registered. Please review their details below and verify the account.
-    </p>
+  const html = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 30px; background-color: #f9f9f9; border: 1px solid #e2e2e2; border-radius: 8px;">
+      <h2 style="color: #ce181e; border-bottom: 2px solid #ce181e; padding-bottom: 10px;">🔔 New Professional User Registration</h2>
+      
+      <p style="font-size: 16px; color: #333; margin-top: 20px;">
+        A new <strong>professional</strong> user has registered. Please review their details below and verify the account.
+      </p>
 
-    <table style="width: 100%; margin-top: 20px; font-size: 15px; color: #444;">
-      <tr>
-        <td style="padding: 8px 0;"><strong>Name:</strong></td>
-        <td style="padding: 8px 0;">${user.name}</td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0;"><strong>Email:</strong></td>
-        <td style="padding: 8px 0;">${user.email}</td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0;"><strong>Mobile:</strong></td>
-        <td style="padding: 8px 0;">${user.mobileNumber}</td>
-      </tr>
-      <tr>
-        <td style="padding: 8px 0;"><strong>Shop Name:</strong></td>
-        <td style="padding: 8px 0;">${user.shopName}</td>
-      </tr>
-    </table>
+      <table style="width: 100%; margin-top: 20px; font-size: 15px; color: #444;">
+        <tr>
+          <td style="padding: 8px 0;"><strong>Name:</strong></td>
+          <td style="padding: 8px 0;">${user.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;"><strong>Email:</strong></td>
+          <td style="padding: 8px 0;">${user.email}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;"><strong>Mobile:</strong></td>
+          <td style="padding: 8px 0;">${user.mobileNumber}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0;"><strong>Shop Name:</strong></td>
+          <td style="padding: 8px 0;">${user.shopName}</td>
+        </tr>
+      </table>
 
-    <div style="text-align: center; margin-top: 30px;">
-      <a href="https://zenithstudiogaya.in/activate/?userid=${user._id}" style="
-        display: inline-block;
-        padding: 12px 25px;
-        background-color: #ce181e;
-        color: #fff;
-        text-decoration: none;
-        font-weight: bold;
-        border-radius: 6px;
-        font-size: 16px;
-      ">✅ Verify User</a>
+      <div style="text-align: center; margin-top: 30px;">
+        <a href="https://zenithstudiogaya.in/activate/?userid=${user._id}" style="
+          display: inline-block;
+          padding: 12px 25px;
+          background-color: #ce181e;
+          color: #fff;
+          text-decoration: none;
+          font-weight: bold;
+          border-radius: 6px;
+          font-size: 16px;
+        ">✅ Verify User</a>
+      </div>
+
+      <p style="margin-top: 40px; font-size: 13px; color: #999; text-align: center;">
+        This is an automated message. Please do not reply to this email.
+      </p>
     </div>
+  `;
 
-    <p style="margin-top: 40px; font-size: 13px; color: #999; text-align: center;">
-      This is an automated message. Please do not reply to this email.
-    </p>
-  </div>
-`;
+ try {
+    await sendEmailViaApi({
+      to: adminEmail,
+      subject: "Your Zenith Studio OTP",
+      message: html,
+      type: "Verification Email",
+    });
 
-  await transporter.sendMail({
-    from: `"Zenith Admin" <${process.env.EMAIL_USER}>`,
-    to: adminEmail,
-    subject: "New Professional User Verification Needed",
-    html,
-  });
+  } catch (err) {
+    console.error("Failed to send link:", err.message);
+  }
+
+  // await transporter.sendMail({
+  //   from: `"Zenith Admin" <${process.env.EMAIL_USER}>`,
+  //   to: adminEmail,
+  //   subject: "New Professional User Verification Needed",
+  //   html,
+  // });
 };
 
 
@@ -314,5 +326,52 @@ export const getUserDetails = async (req, res) => {
   } catch (error) {
     console.error("Error fetching user details:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const createSuperUser = async (req, res) => {
+  const {
+    name,
+    email,
+    password,
+    mobileNumber,
+  } = req.body;
+
+  if (!name || !email || !mobileNumber || !password ) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      mobileNumber,
+      password,
+      licenseKey: "",
+      userType: "admin",
+      active: true,
+      shopName:"Zenith Studio"
+    });
+
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      mobileNumber: mobileNumber,
+      licenseKey: user.licenseKey,
+      userType: user.userType,
+      active: user.active,
+      token: generateToken(user),
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal Server error" });
   }
 };

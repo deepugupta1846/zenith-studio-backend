@@ -17,7 +17,7 @@ router.get("/", getAllOrders);
 router.get("/:id", getOrderById);
 router.put("/:id", updateOrder);
 router.delete("/:id", deleteOrder);
-router.delete("/user", getOrderByUser);
+router.post("/user", getOrderByUser);
 router.get("/download/:orderNo", downloadOrderFiles);
 
 export default router;
