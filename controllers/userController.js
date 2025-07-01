@@ -263,7 +263,7 @@ const html = `
     </table>
 
     <div style="text-align: center; margin-top: 30px;">
-      <a href="http://localhost:5173/activate/?userid=${user._id}" style="
+      <a href="https://zenithstudiogaya.in/activate/?userid=${user._id}" style="
         display: inline-block;
         padding: 12px 25px;
         background-color: #ce181e;
