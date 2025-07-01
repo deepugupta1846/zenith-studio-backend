@@ -174,7 +174,7 @@ export const sendOtp = async (req, res) => {
 
   otps[email] = { otp, expiresAt };
 
-  const htmlContent = `<p>Your OTP is <strong>${otp}</strong>. It is valid for 10 minutes.</p>`;
+  const htmlContent = `Your OTP is ${otp}  It is valid for 10 minutes.`;
 
   try {
     await sendEmailViaApi({
