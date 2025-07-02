@@ -5,23 +5,26 @@ import Price from "../models/Price.js";
 // @access  Admin
 export const createPrice = async (req, res) => {
   try {
-    const { albumType, userType, glossyPaperPrice, ntrPaperPrice, bindingPrice } = req.body;
+    const { albumType, userType, glossyPaperPrice, ntrPaperPrice, bindingPrice, bagPrice, bagType, serviceTax } = req.body;
 
-    if (!albumType || !userType || glossyPaperPrice == null || ntrPaperPrice == null || bindingPrice == null) {
+    if (!albumType || !userType || glossyPaperPrice == null || ntrPaperPrice == null || bindingPrice == null || bagPrice == null || bagType == null || serviceTax == null) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const existing = await Price.findOne({ albumType, userType });
-    if (existing) {
-      return res.status(400).json({ message: "Price entry already exists for this combination" });
-    }
+    // const existing = await Price.findOne({ albumType, userType });
+    // if (existing) {
+    //   return res.status(400).json({ message: "Price entry already exists for this combination" });
+    // }
 
     const price = await Price.create({
       albumType,
       userType,
       glossyPaperPrice,
       ntrPaperPrice,
-      bindingPrice
+      bindingPrice,
+      bagPrice,
+      bagType,
+      serviceTax
     });
 
     res.status(201).json(price);

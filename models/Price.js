@@ -3,12 +3,12 @@ import mongoose from "mongoose";
 const priceSchema = new mongoose.Schema({
   albumType: {
     type: String,
-    enum: ["Print only", "Design only", "Print and design both"],
+    enum: ["print", "print_design"],
     required: true,
   },
   userType: {
     type: String,
-    enum: ["user", "admin", "retailer", "Professional"],
+    enum: ["user", "admin", "retailer", "professional"],
     required: true,
   },
   glossyPaperPrice: {
@@ -22,6 +22,21 @@ const priceSchema = new mongoose.Schema({
     min: 0,
   },
   bindingPrice: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  bagType: {
+    type: String,
+    enum: ["normal_bag", "photo_bag"],
+    required: true,
+  },
+  bagPrice: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  serviceTax: {
     type: Number,
     required: true,
     min: 0,
