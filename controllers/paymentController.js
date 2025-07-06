@@ -5,6 +5,7 @@ import fs from "fs";
 import PDFDocument from "pdfkit";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import Order from "../models/Order.js";
 dotenv.config();
 
 const razorpay = new Razorpay({
@@ -65,6 +66,20 @@ export const verifyPayment = async (req, res) => {
   if (generatedSignature !== razorpay_signature) {
     return res.status(400).json({ success: false, message: "Invalid signature" });
   }
+  await Order.findOneAndUpdate(
+    { orderNo: orderDetails.orderNo },
+    {
+      $set: {
+        paymentStatus: "Paid",
+        paymentInfo: {
+          razorpay_order_id,
+          razorpay_payment_id,
+          razorpay_signature,
+          paymentDate: new Date()
+        }
+      }
+    }
+  );
 
   try {
     // 1. Generate Receipt PDF

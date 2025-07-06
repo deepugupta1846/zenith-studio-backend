@@ -20,6 +20,17 @@ const orderSchema = new mongoose.Schema(
     mobile: {type: String},
     uploadedFiles: [{ type: String }], // Store file URLs or names
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    paymentStatus: {
+      type: String,
+      enum: ['Pending', 'Paid', 'Failed'],
+      default: 'Pending'
+    },
+    paymentInfo: {
+      razorpay_order_id: String,
+      razorpay_payment_id: String,
+      razorpay_signature: String,
+      paymentDate: Date
+    }
   },
   { timestamps: true }
 );

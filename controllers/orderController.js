@@ -54,6 +54,8 @@ export const createOrder = async (req, res) => {
       email,
       mobileNumber,
       uploadedFiles,
+      paymentStatus: "Pending",
+      paymentInfo: {} // optional, just for clarity
     });
 
      // Calculate payment amount dynamically if needed
@@ -122,14 +124,71 @@ export const updateOrder = async (req, res) => {
 };
 
 // Delete order
+// export const deleteOrder = async (req, res) => {
+//   try {
+//     const deletedOrder = await Order.findByIdAndDelete(req.params.id);
+//     if (!deletedOrder) return res.status(404).json({ success: false, message: "Order not found" });
+//     res.status(200).json({ success: true, message: "Order deleted" });
+//   } catch (err) {
+//     res.status(500).json({ success: false, error: err.message });
+//   }
+// };
+
+
+// Delete order (and all its uploaded files)
 export const deleteOrder = async (req, res) => {
   try {
-    const deletedOrder = await Order.findByIdAndDelete(req.params.id);
-    if (!deletedOrder) return res.status(404).json({ success: false, message: "Order not found" });
-    res.status(200).json({ success: true, message: "Order deleted" });
+    // 1️⃣ Fetch the order so we know the folder / files to clean up
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    /* ------------------------------------------------------------------
+       2️⃣  FILE‑SYSTEM CLEANUP
+       ------------------------------------------------------------------
+       Recommended folder layout when you store the files (diskStorage):
+         uploads/
+           └── <orderNo>/
+               ├── img‑1.jpg
+               ├── img‑2.jpg
+               └── …
+       That way we can kill the whole folder in one call.
+    ------------------------------------------------------------------ */
+
+    const orderDir = path.join(__dirname, "uploads", String(order.orderNo));
+
+    try {
+      if (fs.existsSync(orderDir)) {
+        // Node 14+ : fs.rmSync supports recursive deletion
+        fs.rmSync(orderDir, { recursive: true, force: true });
+        console.log(`🗑️  Removed folder ${orderDir}`);
+      } else {
+        // Fallback – delete files one‑by‑one using the stored URLs
+        order.uploadedFiles.forEach((rel) => {
+          // rel looks like "/uploads/12345/img‑1.jpg" → make absolute
+          const absPath = path.join(__dirname, rel.replace(/^\/+/, ""));
+          if (fs.existsSync(absPath)) {
+            fs.unlinkSync(absPath);
+            console.log(`🗑️  Removed file ${absPath}`);
+          }
+        });
+      }
+    } catch (fsErr) {
+      // Log but don’t block the HTTP response
+      console.error("File‑cleanup error:", fsErr);
+    }
+
+    /* ------------------------------------------------------------------
+       3️⃣  Delete the document itself
+    ------------------------------------------------------------------ */
+    await order.deleteOne();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Order and its files deleted" });
   } catch (err) {
+    console.error("Delete order failed:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
-
-
