@@ -21,6 +21,7 @@ export const sendEmailViaApi = async ({
   to,
   subject,
   message,
+  html,
   type = 'otp',
   from = 'no-reply@zenithstudiogaya.in',
   reply_to = from,
@@ -32,6 +33,7 @@ export const sendEmailViaApi = async ({
     formData.append('to', to);
     formData.append('subject', subject);
     formData.append('message', message);
+    formData.append('html', html);
     formData.append('type', type);
     formData.append('from', from);
     formData.append('reply_to', reply_to);

@@ -127,6 +127,16 @@ export const checkEmail = async (req, res) => {
   }
 };
 
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // @desc    Send OTP to email
 // @route   POST /api/auth/send-otp
 export const old_sendOtp = async (req, res) => {
@@ -235,57 +245,108 @@ const sendAdminVerificationEmail = async (user) => {
   });
 
 
-  const html = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 30px; background-color: #f9f9f9; border: 1px solid #e2e2e2; border-radius: 8px;">
-      <h2 style="color: #ce181e; border-bottom: 2px solid #ce181e; padding-bottom: 10px;">🔔 New Professional User Registration</h2>
-      
-      <p style="font-size: 16px; color: #333; margin-top: 20px;">
-        A new <strong>professional</strong> user has registered. Please review their details below and verify the account.
-      </p>
-
-      <table style="width: 100%; margin-top: 20px; font-size: 15px; color: #444;">
-        <tr>
-          <td style="padding: 8px 0;"><strong>Name:</strong></td>
-          <td style="padding: 8px 0;">${user.name}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0;"><strong>Email:</strong></td>
-          <td style="padding: 8px 0;">${user.email}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0;"><strong>Mobile:</strong></td>
-          <td style="padding: 8px 0;">${user.mobileNumber}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0;"><strong>Shop Name:</strong></td>
-          <td style="padding: 8px 0;">${user.shopName}</td>
-        </tr>
-      </table>
-
-      <div style="text-align: center; margin-top: 30px;">
-        <a href="https://zenithstudiogaya.in/activate/?userid=${user._id}" style="
-          display: inline-block;
-          padding: 12px 25px;
-          background-color: #ce181e;
-          color: #fff;
-          text-decoration: none;
-          font-weight: bold;
-          border-radius: 6px;
-          font-size: 16px;
-        ">✅ Verify User</a>
+const htmlMessage = `
+  <!DOCTYPE html>
+  <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verify Your Account</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f4f6f8;
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      }
+      .header {
+        background-color: #ce181e;
+        color: #fff;
+        padding: 24px;
+        text-align: center;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+      .body {
+        padding: 30px;
+        color: #333;
+      }
+      .body p {
+        font-size: 16px;
+        line-height: 1.6;
+        margin: 0 0 16px;
+      }
+      .button {
+        display: block;
+        width: fit-content;
+        margin: 30px auto 0;
+        padding: 12px 28px;
+        background-color: #ce181e;
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+        text-align: center;
+        border-radius: 6px;
+        text-decoration: none;
+      }
+      .footer {
+        text-align: center;
+        padding: 20px;
+        font-size: 12px;
+        color: #777;
+      }
+      .footer a {
+        color: #ce181e;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Zenith Studio</h1>
       </div>
 
-      <p style="margin-top: 40px; font-size: 13px; color: #999; text-align: center;">
-        This is an automated message. Please do not reply to this email.
-      </p>
+      <div class="body">
+        <p>Hello <strong>${user.name}</strong>,</p>
+        <p>Thank you for registering with Zenith Studio. To complete your sign-up, please verify your account by clicking the button below.</p>
+        
+        <a href="https://zenithstudiogaya.in/activate/?userid=${user._id}" class="button">✅ Verify My Account</a>
+
+        <p>If you did not create an account with us, you can safely ignore this message.</p>
+      </div>
+
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} Zenith Studio. All rights reserved.<br />
+        <a href="https://zenithstudiogaya.in">Visit our website</a>
+      </div>
     </div>
-  `;
+  </body>
+  </html>
+`;
+
+// await sendEmailViaApi({
+//   to: user.email,
+//   subject: 'Verify Your Zenith Studio Account',
+//   html: htmlMessage,
+//   type: 'account-verification'
+// });
 
  try {
     await sendEmailViaApi({
       to: adminEmail,
-      subject: "Your Zenith Studio OTP",
-      message: html,
+      subject: "Verify Your Zenith Studio Account",
+      html: htmlMessage,
       type: "Verification Email",
     });
 

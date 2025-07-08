@@ -7,6 +7,7 @@ import {
   verifyUser,
   getUserDetails,
   createSuperUser,
+  getAllUsers,
 } from "../controllers/userController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -19,5 +20,6 @@ router.post("/send-otp", sendOtp);
 router.get("/verify-user/:id", verifyUser);
 router.get("/profile", protect, getUserDetails);
 router.post("/create-super-user", createSuperUser);
+router.get("/get-all-users", protect, getAllUsers);
 
 export default router;
