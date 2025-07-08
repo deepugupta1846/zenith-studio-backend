@@ -135,113 +135,174 @@ export const sendMail = async ({ to, subject, html, attachments = [] }) => {
 
 export const generateReceiptPDF = (paymentDetails, orderDetails) => {
   const filePath = path.join("receipts", `${paymentDetails.payment_id}.pdf`);
-  const doc = new PDFDocument({ margin: 40 });
+  const doc = new PDFDocument({ size: "A4", margin: 40 });
 
-  if (!fs.existsSync("receipts")) {
-    fs.mkdirSync("receipts");
-  }
-
+  if (!fs.existsSync("receipts")) fs.mkdirSync("receipts");
   const stream = fs.createWriteStream(filePath);
   doc.pipe(stream);
 
-  // Add logo
-  const logoPath = path.join("public", "logo.png"); // change if needed
-  if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, 40, 40, { width: 100 });
-  }
+  const orange = "#e95420";
+  const gray = "#f5f5f5";
+  const dark = "#333333";
 
-  // Header
-  doc
-    .fontSize(20)
-    .text("Zenith Studio", 0, 50, { align: "right" })
-    .fontSize(10)
-    .text("123 Main Road, Gaya, Bihar", { align: "right" })
-    .text("Phone: +91-9876543210", { align: "right" })
-    .text("Email: zenithstudio@example.com", { align: "right" });
+  // ─────────── Top Header Bar ───────────
+  doc.rect(0, 0, doc.page.width, 30).fill(orange);
 
   doc.moveDown(2);
-  doc.fontSize(16).text("Invoice", { align: "center", underline: true });
-  doc.moveDown(1);
 
-  // Payment & Customer Info
-  doc.fontSize(12);
-  doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`);
-  doc.text(`Payment ID: ${paymentDetails.payment_id}`);
-  doc.text(`Order ID: ${paymentDetails.order_id}`);
-  doc.moveDown(1);
-  doc.text(`Customer Email: ${orderDetails.email}`);
-  doc.text(`Customer Mobile: ${orderDetails.mobile}`);
-  doc.text(`Delivery Address: ${orderDetails.address || "N/A"}`);
-  doc.moveDown(1);
+  // ─────────── Logo & Receipt Info ───────────
+  const logoPath = path.join("public", "logo.png");
+  if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, 50, 50, { width: 60 });
+  }
 
-  // Order Info Table
   doc
     .fontSize(14)
-    .text("Order Details", { underline: true })
+    .fillColor(dark)
+    .text("RECEIPT", doc.page.width - 150, 50, { align: "right" })
     .moveDown(0.5)
-    .fontSize(12);
+    .fontSize(10)
+    .text(`DATE: ${new Date().toLocaleDateString()}`, { align: "right" })
+    .text(`RECEIPT NO: ${paymentDetails.payment_id}`, { align: "right" });
 
-  const orderDetailsTable = [
-    ["Album Name", orderDetails.albumName],
-    ["Paper Type", orderDetails.paperType],
-    ["Album Size", orderDetails.albumSize],
-    ["Design/Print", orderDetails.designPrint],
-    ["Bag Type", orderDetails.bagType],
-    ["Delivery Option", orderDetails.deliveryOption],
-    ["Order No", orderDetails.orderNo],
+  doc.moveDown(2);
+
+  // ─────────── BILL TO & SHIP TO ───────────
+  const boxY = doc.y;
+  const col1X = 50;
+  const col2X = doc.page.width / 2 + 10;
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .text("BILL TO", col1X, boxY)
+    .font("Helvetica")
+    .text(orderDetails.name, col1X, boxY + 15)
+    .text(orderDetails.email, col1X)
+    .text(orderDetails.mobile, col1X)
+    .text(orderDetails.address || "N/A", col1X);
+
+  doc
+    .font("Helvetica-Bold")
+    .text("SHIP TO", col2X, boxY)
+    .font("Helvetica")
+    .text(orderDetails.name, col2X, boxY + 15)
+    .text(orderDetails.email, col2X)
+    .text(orderDetails.mobile, col2X)
+    .text(orderDetails.address || "N/A", col2X);
+
+  doc.moveDown(5);
+
+  // ─────────── Table Headers ───────────
+  const tableTop = doc.y + 10;
+  const colWidths = [200, 80, 100, 100];
+  const headers = ["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"];
+
+  // Header row
+  doc.rect(50, tableTop, 480, 20).fill(orange).fillColor("white").font("Helvetica-Bold").fontSize(10);
+  headers.forEach((h, i) => {
+    doc.text(h, 55 + colWidths.slice(0, i).reduce((a, b) => a + b, 0), tableTop + 5);
+  });
+
+  doc.fillColor(dark).font("Helvetica").fontSize(10);
+
+  // ─────────── Table Rows (Simulated Items) ───────────
+  const items = [
+    {
+      description: orderDetails.albumName,
+      qty: orderDetails.quantity,
+      unitPrice: orderDetails.baseRate,
+      total: orderDetails.baseRate * orderDetails.quantity,
+    },
   ];
 
-  orderDetailsTable.forEach(([label, value]) => {
+  let rowY = tableTop + 20;
+  items.forEach((item, idx) => {
+    const isEven = idx % 2 === 0;
+    doc
+      .rect(50, rowY, 480, 20)
+      .fill(isEven ? "#ffffff" : gray)
+      .fillColor(dark);
+    doc
+      .text(item.description, 55, rowY + 5)
+      .text(item.qty, 55 + colWidths[0], rowY + 5)
+      .text(item?.unitPrice?.toFixed(2), 55 + colWidths[0] + colWidths[1], rowY + 5)
+      .text(item?.total?.toFixed(2), 55 + colWidths[0] + colWidths[1] + colWidths[2], rowY + 5);
+    rowY += 20;
+  });
+
+  // ─────────── Remarks ───────────
+  doc.fillColor(dark).font("Helvetica-Oblique").fontSize(10).text("Remarks, notes", 55, rowY + 10);
+
+  // ─────────── Summary Section ───────────
+  const summaryY = rowY + 60;
+  const rightX = 330;
+
+  const summaryData = [
+    ["SUBTOTAL", orderDetails.subtotal],
+    ["DISCOUNT", 0],
+    ["SUBTOTAL LESS DISCOUNT", orderDetails.subtotal],
+    ["TAX RATE", "18%"],
+    ["TOTAL TAX", orderDetails.gst],
+    ["SHIPPING/HANDLING", orderDetails.fixedCost],
+    ["Balance Paid", orderDetails.total],
+  ];
+
+  summaryData.forEach(([label, value], i) => {
+    const y = summaryY + i * 20;s
     doc
       .font("Helvetica-Bold")
-      .text(`${label}:`, { continued: true })
+      .text(label, rightX, y)
       .font("Helvetica")
-      .text(` ${value}`);
+      .text(typeof value === "number" ? `₹ ${value?.toFixed(2)}` : value, rightX + 150, y, {
+        align: "right",
+      });
   });
 
-  doc.moveDown(1);
-
-  // Pricing Table
-  doc.fontSize(14).text("Payment Summary", { underline: true });
-  doc.moveDown(0.5);
-  doc.fontSize(12);
-
-  const pricingData = [
-    ["Description", "Amount (₹)"],
-    [`Quantity (${orderDetails.quantity} photos)`, `${orderDetails.baseRate * orderDetails.quantity}`],
-    ["Fixed Charges", `${orderDetails.fixedCost}`],
-    ["Subtotal", `${orderDetails.subtotal}`],
-    ["GST (18%)", `${orderDetails.gst}`],
-    ["Total Paid", `${orderDetails.total}`],
-  ];
-
-  const tableTop = doc.y + 5;
-  const startX = 50;
-  const col1Width = 300;
-  const col2Width = 150;
-
-  pricingData.forEach((row, idx) => {
-    const y = tableTop + idx * 20;
-    doc
-      .font(idx === 0 ? "Helvetica-Bold" : "Helvetica")
-      .text(row[0], startX, y)
-      .text(row[1], startX + col1Width, y, { width: col2Width, align: "right" });
-  });
-
-  doc.moveDown(3);
-
-  // Signature
-  doc
-    .font("Helvetica-Oblique")
-    .text("Authorized Signature", { align: "right" })
-    .moveDown(0.5)
-    .image(path.join("public", "signature.png"), doc.page.width - 120, doc.y, {
-      width: 100,
-      fit: [100, 50],
-    }); // optional
+  // ─────────── Footer Bar ───────────
+  doc.rect(0, doc.page.height - 30, doc.page.width, 30).fill(orange);
 
   doc.end();
   return filePath;
 };
 
+// Add this to your order controller
+export const downloadReceiptByOrderNo = async (req, res) => {
+  try {
+    const { orderNo } = req.params;
 
+    console.log("Downloading receipt for orderNo:", orderNo);
+    const order = await Order.findOne({ orderNo });
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const paymentDetails = order.paymentInfo || {
+      payment_id: "N/A",
+      order_id: order.orderNo,
+    };
+
+    console.log("Payment details:", paymentDetails);
+    console.log("Order details:", order);
+
+    const filePath = generateReceiptPDF(paymentDetails, order);
+
+    console.log("Generated PDF at:", filePath);
+
+    // Wait for PDF to be fully written
+    const stream = fs.createReadStream(filePath);
+    stream.on("open", () => {
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=receipt_${orderNo}.pdf`);
+      stream.pipe(res);
+    });
+
+    stream.on("error", (err) => {
+      console.error("PDF stream error:", err);
+      res.status(500).send("Failed to stream PDF.");
+    });
+  } catch (err) {
+    console.error("Download receipt error:", err);
+    res.status(500).json({ message: "Could not download receipt" });
+  }
+};

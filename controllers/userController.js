@@ -233,6 +233,35 @@ export const verifyUser = async (req, res) => {
   }
 };
 
+export const deactivateUser = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update license key and activate user
+    user.licenseKey = "";
+    user.active = false;
+    await user.save();
+
+    res.status(200).json({
+      message: "User Deactivated successfully",
+      licenseKey: user.licenseKey,
+      userId: user._id,
+    });
+  } catch (error) {
+    console.error("Deactivation failed:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 const sendAdminVerificationEmail = async (user) => {
   const adminEmail = process.env.ADMIN_EMAIL;
 
@@ -353,13 +382,6 @@ const htmlMessage = `
   } catch (err) {
     console.error("Failed to send link:", err.message);
   }
-
-  // await transporter.sendMail({
-  //   from: `"Zenith Admin" <${process.env.EMAIL_USER}>`,
-  //   to: adminEmail,
-  //   subject: "New Professional User Verification Needed",
-  //   html,
-  // });
 };
 
 

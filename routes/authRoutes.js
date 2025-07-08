@@ -8,6 +8,7 @@ import {
   getUserDetails,
   createSuperUser,
   getAllUsers,
+  deactivateUser,
 } from "../controllers/userController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -18,6 +19,7 @@ router.post("/login", loginUser);
 router.get("/check-email", checkEmail);
 router.post("/send-otp", sendOtp);
 router.get("/verify-user/:id", verifyUser);
+router.get("/deactivate-user/:id", deactivateUser);
 router.get("/profile", protect, getUserDetails);
 router.post("/create-super-user", createSuperUser);
 router.get("/get-all-users", protect, getAllUsers);
