@@ -14,7 +14,7 @@ export const createOrder = async (req, res) => {
       albumName,
       paperType,
       albumSize,
-      designPoint,
+      designPrint,
       bagType,
       deliveryOption,
       orderDate,
@@ -25,24 +25,27 @@ export const createOrder = async (req, res) => {
       notes,
       email,
       mobileNumber,
+      pricingDetails, // This is not used in the current logic
     } = req.body;
-
+    console.log("Request body:", req.body);
     // Basic validation
     if (!albumName || !paperType || !albumSize || !orderDate || !orderNo) {
       return res.status(400).json({ message: "Please fill in all required fields" });
     }
 
-    // Collect file paths with full folder name
+    // Collect file paths
+    const uploadedFiles = req.files?.map((file) =>
+      `/uploads/${path.relative(path.join(__dirname, "uploads"), file.path).replace(/\\/g, "/")}`
+    ) || [];
 
-      const uploadedFiles = req.files?.map((file) =>
-  `/uploads/${path.relative(path.join(__dirname, "uploads"), file.path).replace(/\\/g, "/")}`
-) || [];
+    const pricingData = JSON.parse(pricingDetails || "{}");
 
+    // Create the order in DB
     const order = await Order.create({
       albumName,
       paperType,
       albumSize,
-      designPoint,
+      designPrint,
       bagType,
       deliveryOption,
       orderDate,
@@ -52,23 +55,65 @@ export const createOrder = async (req, res) => {
       advancePercent,
       notes,
       email,
-      mobileNumber,
+      mobile: mobileNumber,
       uploadedFiles,
       paymentStatus: "Pending",
-      paymentInfo: {} // optional, just for clarity
+      paymentInfo: {},
+      priceDetails: {
+        quantity: pricingData?.qty || 1,
+        paperRate: pricingData?.paperRate || 0,
+        bindingRate: pricingData?.binding || 0,
+        bagRate: pricingData?.bagRate || 0,
+        subtotal: pricingData?.subtotal || 0,
+        serviceTax: pricingData?.gst || 0,
+        total: pricingData?.total || 0,
+      },
     });
 
-     // Calculate payment amount dynamically if needed
-    const amount = 500; // Example: ₹500 → calculate dynamically
+    // Prepare order details text
+    const orderDetails = `
+      Order No: ${order.orderNo}
+      Album Name: ${order.albumName}
+      Paper Type: ${order.paperType}
+      Album Size: ${order.albumSize}
+      Design / Print: ${order.designPrint || "-"}
+      Bag Type: ${order.bagType || "-"}
+      Delivery Option: ${order.deliveryOption || "-"}
+      Order Date: ${order.orderDate}
+      Delivery Date: ${order.deliveryDate || "-"}
+      Payment Method: ${order.paymentMethod || "-"}
+      Advance Percent: ${order.advancePercent || "-"}
+      Notes: ${order.notes || "-"}
+      Email: ${order.email || "-"}
+      Mobile: ${order.mobile || "-"}
+      Uploaded Files: ${uploadedFiles.length ? uploadedFiles.join(", ") : "-"}
+      `.trim();
 
+    // Create uploads/order-{orderNo} folder
+    const orderFolder = path.join(process.cwd(), "uploads", `order-${order.orderNo}`);
+    if (!fs.existsSync(orderFolder)) {
+      fs.mkdirSync(orderFolder, { recursive: true });
+    }
+
+    // Write details.txt inside the folder
+    const detailsFilePath = path.join(orderFolder, "details.txt");
+    fs.writeFileSync(detailsFilePath, orderDetails, "utf-8");
+
+    // Example dynamic amount
+    const amount = 500;
+
+    // Send response
     res.status(201).json({
       order,
-      paymentRedirect: "/api/payment/create-order", // Where to POST payment details from frontend
+      paymentRedirect: "/api/payment/create-order",
       suggestedPaymentDetails: {
         amount,
         currency: "INR",
         receipt: `receipt_order_${order.orderNo}`,
-        notes: { albumName: order.albumName, orderNo: order.orderNo },
+        notes: {
+          albumName: order.albumName,
+          orderNo: order.orderNo,
+        },
       },
     });
   } catch (err) {

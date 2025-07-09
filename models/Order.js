@@ -7,7 +7,7 @@ const orderSchema = new mongoose.Schema(
     albumName: { type: String, required: true },
     paperType: { type: String, required: true },
     albumSize: { type: String, required: true },
-    designPoint: { type: String },
+    designPrint: { type: String },
     bagType: { type: String },
     deliveryOption: { type: String },
     orderDate: { type: Date, required: true },
@@ -30,7 +30,17 @@ const orderSchema = new mongoose.Schema(
       razorpay_payment_id: String,
       razorpay_signature: String,
       paymentDate: Date
-    }
+    },
+    priceDetails:{
+      quantity: { type: Number, required: true },
+      paperRate: { type: Number, required: true },
+      bindingRate: { type: Number, default: 0 },
+      bagRate: { type: Number, required: true },
+      subtotal: { type: Number, required: true },
+      serviceTax: { type: Number, required: true },
+      total: { type: Number, required: true },
+    },
+    downloadFile: { type: Boolean, default: false }, // Flag to indicate if the order file is ready for download
   },
   { timestamps: true }
 );

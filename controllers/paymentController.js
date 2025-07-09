@@ -134,14 +134,14 @@ export const sendMail = async ({ to, subject, html, attachments = [] }) => {
 };
 
 export const generateReceiptPDF = (paymentDetails, orderDetails) => {
-  const filePath = path.join("receipts", `${paymentDetails.payment_id}.pdf`);
+  const filePath = path.join("","uploads", `order-${orderDetails.orderNo}`, `${paymentDetails.payment_id}.pdf`);
   const doc = new PDFDocument({ size: "A4", margin: 40 });
 
   if (!fs.existsSync("receipts")) fs.mkdirSync("receipts");
   const stream = fs.createWriteStream(filePath);
   doc.pipe(stream);
 
-  const orange = "#e95420";
+  const orange = "#ce181e";
   const gray = "#f5f5f5";
   const dark = "#333333";
 
@@ -249,12 +249,12 @@ export const generateReceiptPDF = (paymentDetails, orderDetails) => {
   ];
 
   summaryData.forEach(([label, value], i) => {
-    const y = summaryY + i * 20;s
+    const y = summaryY + i * 20;
     doc
       .font("Helvetica-Bold")
       .text(label, rightX, y)
       .font("Helvetica")
-      .text(typeof value === "number" ? `₹ ${value?.toFixed(2)}` : value, rightX + 150, y, {
+      .text(typeof value === "number" ? `Rs. ${value?.toFixed(2)}` : value, rightX + 150, y, {
         align: "right",
       });
   });

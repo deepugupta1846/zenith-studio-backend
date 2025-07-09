@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import archiver from "archiver";
+import Order from "../models/Order.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,14 +11,13 @@ const __dirname = path.dirname(__filename);
 // Define the multer storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    console.log(req.body)
     const folderName = `order-${req.body.orderNo}`;
 
     const relativePath = file.originalname.includes("/")
       ? path.dirname(file.originalname)
       : "";
 
-    const uploadPath = path.join(__dirname, "uploads", folderName, relativePath);
+    const uploadPath = path.join(process.cwd(), "uploads", folderName, relativePath);
 
     fs.mkdirSync(uploadPath, { recursive: true });
 
@@ -41,9 +41,9 @@ export const upload = multer({
 
 
 
-export const downloadOrderFiles = (req, res) => {
+export const downloadOrderFiles = async (req, res) => {
   const { orderNo } = req.params;
-  const folderPath = path.join(__dirname, "uploads", `order-${orderNo}`);
+  const folderPath = path.join(process.cwd(), "uploads", `order-${orderNo}`);
 
   if (!fs.existsSync(folderPath)) {
     return res.status(404).json({ message: "Order files not found" });
@@ -54,6 +54,32 @@ export const downloadOrderFiles = (req, res) => {
 
   const archive = archiver("zip", { zlib: { level: 9 } });
   archive.pipe(res);
+
+  // Add folder to archive
   archive.directory(folderPath, false);
+
+  // Finalize and handle post-download
   archive.finalize();
+
+  // When the download finishes
+  archive.on("end", async () => {
+    try {
+      // Delete the folder after zip is streamed
+      fs.rmSync(folderPath, { recursive: true, force: true });
+
+      // Update the order in DB
+      await Order.findOneAndUpdate(
+        { orderNo },
+        { $set: { downloadFile: true } }
+      );
+    } catch (err) {
+      console.error("Post-download cleanup failed:", err);
+    }
+  });
+
+  // Handle archiver error
+  archive.on("error", (err) => {
+    console.error("Archive error:", err);
+    res.status(500).json({ message: "Failed to generate zip." });
+  });
 };

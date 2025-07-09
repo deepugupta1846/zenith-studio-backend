@@ -5,9 +5,9 @@ import Price from "../models/Price.js";
 // @access  Admin
 export const createPrice = async (req, res) => {
   try {
-    const { albumType, userType, glossyPaperPrice, ntrPaperPrice, bindingPrice, bagPrice, bagType, serviceTax } = req.body;
+    const { albumType, userType, glossyPaperPrice, ntrPaperPrice, bindingPrice, bagPrice, bagType, serviceTax, paperSize } = req.body;
 
-    if (!albumType || !userType || glossyPaperPrice == null || ntrPaperPrice == null || bindingPrice == null || bagPrice == null || bagType == null || serviceTax == null) {
+    if (!albumType || !userType || glossyPaperPrice == null || ntrPaperPrice == null || bindingPrice == null || bagPrice == null || bagType == null || serviceTax == null || paperSize == null) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -24,7 +24,8 @@ export const createPrice = async (req, res) => {
       bindingPrice,
       bagPrice,
       bagType,
-      serviceTax
+      serviceTax,
+      paperSize
     });
 
     res.status(201).json(price);

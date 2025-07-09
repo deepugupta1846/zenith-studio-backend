@@ -11,6 +11,10 @@ const priceSchema = new mongoose.Schema({
     enum: ["user", "admin", "retailer", "professional"],
     required: true,
   },
+  paperSize: {
+    type: String,
+    required: true,
+  },
   glossyPaperPrice: {
     type: Number,
     required: true,
