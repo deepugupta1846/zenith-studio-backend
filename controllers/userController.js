@@ -44,7 +44,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    const user = await User.create({
+    const user = {
       name,
       email,
       mobileNumber,
@@ -53,25 +53,26 @@ export const registerUser = async (req, res) => {
       userType: userType || "user",
       active: false,
       shopName
-    });
+    };
 
     delete otps[email];
 
     if (user.userType === "Professional") {
+      user.active = false; 
+      const newUser = await User.create(user);
       await sendAdminVerificationEmail(user);
+      return res.status(201).json({
+        message: "User registered successfully. Please wait for admin approval.",
+        status:"success"
+      });
+    }else{
+      user.active = true; // Set active to true for non-professional users
+      const newUser = await User.create(user);
+      res.status(201).json({
+        status:"success",
+        message: "User registered successfully.",
+      });
     }
-
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      mobileNumber: mobileNumber,
-      licenseKey: user.licenseKey,
-      userType: user.userType,
-      active: user.active,
-      token: generateToken(user),
-    });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal Server error" });
@@ -184,13 +185,13 @@ export const sendOtp = async (req, res) => {
 
   otps[email] = { otp, expiresAt };
 
-  const htmlContent = `Your OTP is ${otp}  It is valid for 10 minutes.`;
+  const htmlContent = `Your OTP is <b>${otp}</b>. It is valid for 10 minutes.`;
 
   try {
     await sendEmailViaApi({
       to: email,
-      subject: "Your Zenith Studio OTP",
-      message: htmlContent,
+      subject: "Your Zenith Studio Registration OTP",
+      html: htmlContent,
       type: "otp"
     });
 
@@ -456,5 +457,89 @@ export const createSuperUser = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal Server error" });
+  }
+};
+
+
+// @route   POST /api/auth/forgot-password/send-otp
+export const sendForgotPasswordOtp = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: "Email is required" });
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    otps[email] = { otp, expiresAt };
+
+    const htmlContent = `Your password reset OTP is <b>${otp}</b>. It is valid for 10 minutes.`;
+
+    await sendEmailViaApi({
+      to: email,
+      subject: "Reset Your Password - Zenith Studio",
+      html: htmlContent,
+      type: "otp",
+    });
+
+    res.status(200).json({ message: "OTP sent to email" });
+  } catch (err) {
+    console.error("Forgot password OTP error:", err);
+    res.status(500).json({ message: "Failed to send OTP" });
+  }
+};
+
+
+// @route   POST /api/auth/reset-password
+export const resetPassword = async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  if (!email || !otp || !newPassword) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const storedOtp = otps[email];
+  if (!storedOtp || storedOtp.otp !== otp || storedOtp.expiresAt < Date.now()) {
+    return res.status(400).json({ message: "Invalid or expired OTP" });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.password = newPassword;
+    await user.save();
+
+    delete otps[email];
+
+    res.status(200).json({ message: "Password reset successfully" });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    res.status(500).json({ message: "Failed to reset password" });
+  }
+};
+
+
+export const deleteUser = async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await user.deleteOne();
+
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    res.status(500).json({ message: "Failed to delete user" });
   }
 };
