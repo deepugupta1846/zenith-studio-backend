@@ -41,6 +41,11 @@ const orderSchema = new mongoose.Schema(
       total: { type: Number, required: true },
     },
     downloadFile: { type: Boolean, default: false }, // Flag to indicate if the order file is ready for download
+    orderStatus: {
+      type: String,
+      enum: ['Pending', 'In Progress', 'Completed', 'Delivered', 'Cancelled'],
+      default: 'Pending'
+    }
   },
   { timestamps: true }
 );

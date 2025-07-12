@@ -201,7 +201,7 @@ export const deleteOrder = async (req, res) => {
        That way we can kill the whole folder in one call.
     ------------------------------------------------------------------ */
 
-    const orderDir = path.join(__dirname, "uploads", String(order.orderNo));
+    const orderDir = path.join("", "uploads", String(order.orderNo));
 
     try {
       if (fs.existsSync(orderDir)) {
