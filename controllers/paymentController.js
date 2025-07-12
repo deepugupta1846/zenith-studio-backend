@@ -134,7 +134,17 @@ export const sendMail = async ({ to, subject, html, attachments = [] }) => {
 };
 
 export const generateReceiptPDF = (paymentDetails, orderDetails) => {
-  const filePath = path.join("","uploads", `order-${orderDetails.orderNo}`, `${paymentDetails.payment_id}.pdf`);
+  console.log("Generating receipt for order:", orderDetails.orderNo);
+  const orderFolder = path.join("uploads", `order-${orderDetails.orderNo}`);
+  const folderPath = path.join("", "uploads", `order-${orderDetails.orderNo}`);
+  const filePath = path.join(folderPath, `${paymentDetails.payment_id || orderDetails.orderNo}.pdf`);
+
+  // Ensure the folder exists
+  if (!fs.existsSync(folderPath)) {
+    fs.mkdirSync(folderPath, { recursive: true }); // creates nested dirs if needed
+  }
+
+  // const filePath = path.join("","uploads", `order-${orderDetails.orderNo}`, `${paymentDetails.payment_id || orderDetails.orderNo}.pdf`);
   const doc = new PDFDocument({ size: "A4", margin: 40 });
 
   if (!fs.existsSync("receipts")) fs.mkdirSync("receipts");
@@ -271,7 +281,8 @@ export const downloadReceiptByOrderNo = async (req, res) => {
   try {
     const { orderNo } = req.params;
 
-    console.log("Downloading receipt for orderNo:", orderNo);
+    console.log("Received orderNo:", orderNo);
+
     const order = await Order.findOne({ orderNo });
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -282,25 +293,42 @@ export const downloadReceiptByOrderNo = async (req, res) => {
       order_id: order.orderNo,
     };
 
-    console.log("Payment details:", paymentDetails);
-    console.log("Order details:", order);
+    const folderPath = path.join("uploads", `order-${order.orderNo}`);
+    const fileName = `${paymentDetails.payment_id || order.orderNo}.pdf`;
+    const filePath = path.join(folderPath, fileName);
 
-    const filePath = generateReceiptPDF(paymentDetails, order);
+    // ✅ Check if PDF already exists (cache)
+    if (!fs.existsSync(filePath)) {
+      console.log("Generating new PDF...");
+      await generateReceiptPDF(paymentDetails, order);
+    } else {
+      console.log("Using cached PDF...");
+    }
 
-    console.log("Generated PDF at:", filePath);
+    console.log("Sending PDF:", filePath);
 
-    // Wait for PDF to be fully written
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=receipt_${orderNo}.pdf`);
+
     const stream = fs.createReadStream(filePath);
-    stream.on("open", () => {
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=receipt_${orderNo}.pdf`);
-      stream.pipe(res);
-    });
+    stream.pipe(res);
 
     stream.on("error", (err) => {
       console.error("PDF stream error:", err);
       res.status(500).send("Failed to stream PDF.");
     });
+
+    // ✅ Delete file after sending (optional)
+    res.on("finish", () => {
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error("Error deleting PDF:", err);
+        } else {
+          console.log("Deleted temporary PDF:", filePath);
+        }
+      });
+    });
+
   } catch (err) {
     console.error("Download receipt error:", err);
     res.status(500).json({ message: "Could not download receipt" });
