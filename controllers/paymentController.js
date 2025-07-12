@@ -293,7 +293,7 @@ export const downloadReceiptByOrderNo = async (req, res) => {
       order_id: order.orderNo,
     };
 
-    const folderPath = path.join("uploads", `order-${order.orderNo}`);
+    const folderPath = path.join("", "uploads", `order-${order.orderNo}`);
     const fileName = `${paymentDetails.payment_id || order.orderNo}.pdf`;
     const filePath = path.join(folderPath, fileName);
 

@@ -348,12 +348,16 @@ const htmlMessage = `
       </div>
 
       <div class="body">
-        <p>Hello <strong>${user.name}</strong>,</p>
-        <p>Thank you for registering with Zenith Studio. To complete your sign-up, please verify your account by clicking the button below.</p>
-        
-        <a href="https://zenithstudiogaya.in/activate/?userid=${user._id}" class="button">✅ Verify My Account</a>
+        <p>Hello <strong>Admin</strong>,</p>
+        <p>Please verify professional account. To complete register process, click the button below.</p>
+        <p><strong>User Details:</strong></p>
+        <p>Name: ${user.name}</p>
+        <p>Email: ${user.email}</p>
+        <p>Mobile Number: ${user.mobileNumber}</p>
+        <p>Shop Name: ${user.shopName || "N/A"}</p>
 
-        <p>If you did not create an account with us, you can safely ignore this message.</p>
+        <a href="https://zenithstudiogaya.in/activate/?userid=${user._id}" class="button">✅ Verify My Account</a>
+        
       </div>
 
       <div class="footer">
