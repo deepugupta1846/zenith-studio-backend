@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
+    fullName: { type: String, required: true },
     albumName: { type: String, required: true },
     paperType: { type: String, required: true },
     albumSize: { type: String, required: true },
@@ -29,7 +30,8 @@ const orderSchema = new mongoose.Schema(
       razorpay_order_id: String,
       razorpay_payment_id: String,
       razorpay_signature: String,
-      paymentDate: Date
+      paymentDate: Date,
+      utr_number: String,
     },
     priceDetails:{
       quantity: { type: Number, required: true },
@@ -40,12 +42,13 @@ const orderSchema = new mongoose.Schema(
       serviceTax: { type: Number, required: true },
       total: { type: Number, required: true },
     },
-    downloadFile: { type: Boolean, default: false }, // Flag to indicate if the order file is ready for download
+    downloadFile: { type: Boolean, default: false },
     orderStatus: {
       type: String,
       enum: ['Pending', 'In Progress', 'Completed', 'Delivered', 'Cancelled'],
       default: 'Pending'
-    }
+    },
+    sheets: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

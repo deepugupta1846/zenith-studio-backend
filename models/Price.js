@@ -45,6 +45,12 @@ const priceSchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
+  deliveryCharge: {
+    type: Number,
+    required: true,
+    min: 0,
+    default: 110,
+  },
 }, {
   timestamps: true,
 });

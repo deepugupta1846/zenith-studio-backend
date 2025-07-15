@@ -6,6 +6,8 @@ import {
   updateOrder,
   deleteOrder,
   getOrderByUser,
+  updatePaymentByOrderNo,
+  generateQRPayment,
 } from "../controllers/orderController.js";
 import {downloadOrderFiles, upload} from "../middlewares/uploadMiddleware.js";
 
@@ -19,5 +21,7 @@ router.put("/:id", updateOrder);
 router.delete("/:id", deleteOrder);
 router.post("/user", getOrderByUser);
 router.get("/download/:orderNo", downloadOrderFiles);
+router.post("/payment/update", updatePaymentByOrderNo);
+router.post("/make-qr-payment", generateQRPayment);
 
 export default router;
