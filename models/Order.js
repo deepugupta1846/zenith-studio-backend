@@ -49,6 +49,7 @@ const orderSchema = new mongoose.Schema(
       default: 'Pending'
     },
     sheets: { type: Number, default: 0 },
+    active: { type: Boolean, default: true }
   },
   { timestamps: true }
 );

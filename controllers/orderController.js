@@ -342,47 +342,34 @@ export const updatePaymentByOrderNo = async (req, res) => {
 // Delete order (and all its uploaded files)
 export const deleteOrder = async (req, res) => {
   try {
-    // 1️⃣ Fetch the order so we know the folder / files to clean up
+    // 1️⃣ Fetch the order
     const order = await Order.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
-    const orderDir = path.join("", "uploads", String(order.orderNo));
+
+    const orderDir = path.join("", "uploads", `order-${order.orderNo}`); // Adjust root if needed
 
     try {
       if (fs.existsSync(orderDir)) {
-        // Node 14+ : fs.rmSync supports recursive deletion
         fs.rmSync(orderDir, { recursive: true, force: true });
         console.log(`🗑️  Removed folder ${orderDir}`);
-      } else {
-        // Fallback – delete files one‑by‑one using the stored URLs
-        order.uploadedFiles.forEach((rel) => {
-          // rel looks like "/uploads/12345/img‑1.jpg" → make absolute
-          const absPath = path.join(__dirname, rel.replace(/^\/+/, ""));
-          if (fs.existsSync(absPath)) {
-            fs.unlinkSync(absPath);
-            console.log(`🗑️  Removed file ${absPath}`);
-          }
-        });
       }
     } catch (fsErr) {
-      // Log but don’t block the HTTP response
-      console.error("File‑cleanup error:", fsErr);
+      console.error("File cleanup error:", fsErr);
     }
 
-    /* ------------------------------------------------------------------
-       3️⃣  Delete the document itself
-    ------------------------------------------------------------------ */
-    await order.deleteOne();
+    // 2️⃣ Soft delete: update active to false
+    order.active = false;
+    await order.save();
 
-    res
-      .status(200)
-      .json({ success: true, message: "Order and its files deleted" });
+    res.status(200).json({ success: true, message: "Order deleted" });
   } catch (err) {
     console.error("Delete order failed:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 
 export const generateQrCode = async (paymentData) => {

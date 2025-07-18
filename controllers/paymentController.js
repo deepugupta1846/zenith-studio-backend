@@ -133,144 +133,161 @@ export const sendMail = async ({ to, subject, html, attachments = [] }) => {
   });
 };
 
-export const generateReceiptPDF = (paymentDetails, orderDetails) => {
-  console.log("Generating receipt for order:", orderDetails.orderNo);
-  const orderFolder = path.join("uploads", `order-${orderDetails.orderNo}`);
-  const folderPath = path.join("", "uploads", `order-${orderDetails.orderNo}`);
-  const filePath = path.join(folderPath, `${paymentDetails.payment_id || orderDetails.orderNo}.pdf`);
+export const generateReceiptPDF = (paymentDetails, orderDetails, isReceipt = false) => {
+  const folderPath = path.join("", isReceipt ? "receipts" : "uploads", `order-${orderDetails.orderNo}`);
+  const fileName = `receipt_${orderDetails.orderNo}.pdf`;
+  const filePath = path.join(folderPath, fileName);
 
-  // Ensure the folder exists
   if (!fs.existsSync(folderPath)) {
-    fs.mkdirSync(folderPath, { recursive: true }); // creates nested dirs if needed
+    fs.mkdirSync(folderPath, { recursive: true });
   }
 
-  // const filePath = path.join("","uploads", `order-${orderDetails.orderNo}`, `${paymentDetails.payment_id || orderDetails.orderNo}.pdf`);
-  const doc = new PDFDocument({ size: "A4", margin: 40 });
-
-  if (!fs.existsSync("receipts")) fs.mkdirSync("receipts");
+  const doc = new PDFDocument({ size: "A4", margin: 50 });
   const stream = fs.createWriteStream(filePath);
   doc.pipe(stream);
 
-  const orange = "#ce181e";
+  const red = "#ce181e";
   const gray = "#f5f5f5";
-  const dark = "#333333";
+  const black = "#000";
 
-  // ─────────── Top Header Bar ───────────
-  doc.rect(0, 0, doc.page.width, 30).fill(orange);
-
-  doc.moveDown(2);
-
-  // ─────────── Logo & Receipt Info ───────────
-  const logoPath = path.join("public", "logo.png");
-  if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, 50, 50, { width: 60 });
-  }
-
+  // Header
   doc
-    .fontSize(14)
-    .fillColor(dark)
-    .text("RECEIPT", doc.page.width - 150, 50, { align: "right" })
-    .moveDown(0.5)
+    .fillColor(red)
+    .fontSize(18)
+    .text("Zenith Studio", { align: "left" })
+    .fillColor(black)
     .fontSize(10)
-    .text(`DATE: ${new Date().toLocaleDateString()}`, { align: "right" })
-    .text(`RECEIPT NO: ${paymentDetails.payment_id}`, { align: "right" });
+    .text("Peer Mansoor Road,")
+    .text("Gaya, Bihar 823001");
 
-  doc.moveDown(2);
+  doc.moveDown();
 
-  // ─────────── BILL TO & SHIP TO ───────────
-  const boxY = doc.y;
-  const col1X = 50;
-  const col2X = doc.page.width / 2 + 10;
-
+  // Customer Info Section
+  const topY = doc.y;
   doc
+    .fillColor(red)
     .font("Helvetica-Bold")
-    .fontSize(10)
-    .text("BILL TO", col1X, boxY)
+    .text("Customer Info", 50, topY)
+    .fillColor(black)
     .font("Helvetica")
-    .text(orderDetails.name, col1X, boxY + 15)
-    .text(orderDetails.email, col1X)
-    .text(orderDetails.mobile, col1X)
-    .text(orderDetails.address || "N/A", col1X);
-
-  doc
-    .font("Helvetica-Bold")
-    .text("SHIP TO", col2X, boxY)
-    .font("Helvetica")
-    .text(orderDetails.name, col2X, boxY + 15)
-    .text(orderDetails.email, col2X)
-    .text(orderDetails.mobile, col2X)
-    .text(orderDetails.address || "N/A", col2X);
+    .text(`Name: ${orderDetails.fullName || "N/A"}`, 50, topY + 15)
+    .text(`Mobile: ${orderDetails.mobile || "N/A"}`, 50, topY + 30)
+    .text(`Email: ${orderDetails.email || "N/A"}`, 50, topY + 45)
+    .text(`Order No: ${orderDetails.orderNo}`, 300, topY + 15)
+    .text(`Order Date: ${new Date(orderDetails.orderDate).toLocaleDateString()}`, 300, topY + 30)
+    .text(`Delivery Date: ${new Date(orderDetails.deliveryDate).toLocaleDateString()}`, 300, topY + 45);
 
   doc.moveDown(5);
 
-  // ─────────── Table Headers ───────────
-  const tableTop = doc.y + 10;
-  const colWidths = [200, 80, 100, 100];
-  const headers = ["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"];
+  // Table Headers
+  const tableY = doc.y + 10;
+  doc
+    .fillColor(red)
+    .font("Helvetica-Bold")
+    .text("Qty", 50, tableY)
+    .text("Description", 100, tableY)
+    .text("Unit Price", 350, tableY)
+    .text("Amount", 450, tableY);
 
-  // Header row
-  doc.rect(50, tableTop, 480, 20).fill(orange).fillColor("white").font("Helvetica-Bold").fontSize(10);
-  headers.forEach((h, i) => {
-    doc.text(h, 55 + colWidths.slice(0, i).reduce((a, b) => a + b, 0), tableTop + 5);
-  });
+  doc.moveTo(50, tableY + 15).lineTo(550, tableY + 15).stroke(red);
 
-  doc.fillColor(dark).font("Helvetica").fontSize(10);
+  // Table Data
+  let y = tableY + 25;
+  const items = [];
 
-  // ─────────── Table Rows (Simulated Items) ───────────
-  const items = [
-    {
-      description: orderDetails.albumName,
-      qty: orderDetails.quantity,
-      unitPrice: orderDetails.baseRate,
-      total: orderDetails.baseRate * orderDetails.quantity,
-    },
-  ];
+  const { quantity = 1, paperRate = 0, bindingRate = 0, bagRate = 0 } = orderDetails.priceDetails || {};
 
-  let rowY = tableTop + 20;
-  items.forEach((item, idx) => {
-    const isEven = idx % 2 === 0;
+  if (paperRate > 0) {
+    items.push({
+      qty: quantity,
+      description: `${orderDetails.albumName || "Album"} - Paper (${orderDetails.paperType || "N/A"})`,
+      unitPrice: paperRate,
+      total: paperRate * quantity,
+    });
+  }
+
+  if (bindingRate > 0) {
+    items.push({
+      qty: quantity,
+      description: `Binding`,
+      unitPrice: bindingRate,
+      total: bindingRate * quantity,
+    });
+  }
+
+  if (bagRate > 0) {
+    items.push({
+      qty: quantity,
+      description: `Bag Type: ${orderDetails.bagType || "N/A"}`,
+      unitPrice: bagRate,
+      total: bagRate * quantity,
+    });
+  }
+
+  items.forEach((item) => {
     doc
-      .rect(50, rowY, 480, 20)
-      .fill(isEven ? "#ffffff" : gray)
-      .fillColor(dark);
-    doc
-      .text(item.description, 55, rowY + 5)
-      .text(item.qty, 55 + colWidths[0], rowY + 5)
-      .text(item?.unitPrice?.toFixed(2), 55 + colWidths[0] + colWidths[1], rowY + 5)
-      .text(item?.total?.toFixed(2), 55 + colWidths[0] + colWidths[1] + colWidths[2], rowY + 5);
-    rowY += 20;
-  });
-
-  // ─────────── Remarks ───────────
-  doc.fillColor(dark).font("Helvetica-Oblique").fontSize(10).text("Remarks, notes", 55, rowY + 10);
-
-  // ─────────── Summary Section ───────────
-  const summaryY = rowY + 60;
-  const rightX = 330;
-
-  const summaryData = [
-    ["SUBTOTAL", orderDetails.subtotal],
-    ["DISCOUNT", 0],
-    ["SUBTOTAL LESS DISCOUNT", orderDetails.subtotal],
-    ["TAX RATE", "18%"],
-    ["TOTAL TAX", orderDetails.gst],
-    ["SHIPPING/HANDLING", orderDetails.fixedCost],
-    ["Balance Paid", orderDetails.total],
-  ];
-
-  summaryData.forEach(([label, value], i) => {
-    const y = summaryY + i * 20;
-    doc
-      .font("Helvetica-Bold")
-      .text(label, rightX, y)
+      .fillColor(black)
       .font("Helvetica")
-      .text(typeof value === "number" ? `Rs. ${value?.toFixed(2)}` : value, rightX + 150, y, {
-        align: "right",
-      });
+      .text(item.qty, 50, y)
+      .text(item.description, 100, y)
+      .text(item.unitPrice.toFixed(2), 350, y)
+      .text(item.total.toFixed(2), 450, y);
+    y += 20;
   });
 
-  // ─────────── Footer Bar ───────────
-  doc.rect(0, doc.page.height - 30, doc.page.width, 30).fill(orange);
+  // Totals
+  y += 10;
+  doc
+    .font("Helvetica")
+    .text("Subtotal", 400, y)
+    .text(orderDetails.priceDetails.subtotal?.toFixed(2) || "0.00", 470, y, { align: "right" });
+
+  y += 15;
+  doc.text("Service Tax", 400, y);
+  doc.text(orderDetails.priceDetails.serviceTax?.toFixed(2) || "0.00", 470, y, { align: "right" });
+
+  y += 20;
+  doc
+    .font("Helvetica-Bold")
+    .text("Total", 400, y)
+    .text(`${orderDetails.priceDetails.total?.toFixed(2) || "0.00"}/-`, 470, y, { align: "right" });
+
+  // Payment Info
+  y += 40;
+  doc
+    .fillColor(red)
+    .font("Helvetica-Bold")
+    .text("Payment Method", 50, y)
+    .fillColor(black)
+    .font("Helvetica")
+    .text(orderDetails.paymentMethod || "N/A", 50, y + 15);
+
+  doc
+    .fillColor(red)
+    .font("Helvetica-Bold")
+    .text("Notes", 300, y)
+    .fillColor(black)
+    .font("Helvetica")
+    .text(orderDetails.notes || "N/A", 300, y + 15);
+
+  // Terms
+  y += 60;
+  doc
+    .moveTo(50, y)
+    .lineTo(550, y)
+    .stroke(red);
+  y += 10;
+
+  doc
+    .fillColor(red)
+    .font("Helvetica-Bold")
+    .text("Terms & Conditions", 50, y);
+
+  doc
+    .fillColor(black)
+    .font("Helvetica")
+    .text("Payment is due within 15 days", 50, y + 15)
+    .text("Please make checks payable to: ravzenith57@gmail.com", 50, y + 30);
 
   doc.end();
   return filePath;
@@ -293,14 +310,14 @@ export const downloadReceiptByOrderNo = async (req, res) => {
       order_id: order.orderNo,
     };
 
-    const folderPath = path.join("", "uploads", `order-${order.orderNo}`);
-    const fileName = `${paymentDetails.payment_id || order.orderNo}.pdf`;
+    const folderPath = path.join("", "receipts", `order-${order.orderNo}`);
+    const fileName = `receipt_${order.orderNo}.pdf`;
     const filePath = path.join(folderPath, fileName);
 
     // ✅ Check if PDF already exists (cache)
     if (!fs.existsSync(filePath)) {
       console.log("Generating new PDF...");
-      await generateReceiptPDF(paymentDetails, order);
+      await generateReceiptPDF(paymentDetails, order, true);
     } else {
       console.log("Using cached PDF...");
     }
