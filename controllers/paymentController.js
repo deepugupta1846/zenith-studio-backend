@@ -176,7 +176,11 @@ export const generateReceiptPDF = (paymentDetails, orderDetails, isReceipt = fal
     .text(`Order No: ${orderDetails.orderNo}`, 300, topY + 15)
     .text(`Order Date: ${new Date(orderDetails.orderDate).toLocaleDateString()}`, 300, topY + 30)
     .text(`Delivery Date: ${new Date(orderDetails.deliveryDate).toLocaleDateString()}`, 300, topY + 45);
-
+    if(orderDetails.deliveryOption === 'courier'){
+      doc
+        .text(`Address: ${orderDetails.deliveryAddress.street || ""}, ${orderDetails.deliveryAddress.landmark || ""}, ${orderDetails.deliveryAddress.city || ""}, ${orderDetails.deliveryAddress.state || ""}, ${orderDetails.deliveryAddress.zipCode || ""}`, 50, topY + 60)
+        .text(`Country: ${orderDetails.deliveryAddress.country || "India"}`, 50, topY + 75);
+    }
   doc.moveDown(5);
 
   // Table Headers
@@ -260,7 +264,9 @@ export const generateReceiptPDF = (paymentDetails, orderDetails, isReceipt = fal
     .text("Payment Method", 50, y)
     .fillColor(black)
     .font("Helvetica")
-    .text(orderDetails.paymentMethod || "N/A", 50, y + 15);
+    .text(orderDetails.paymentMethod || "N/A", 50, y + 15)
+    .text("Payment Status:", 50, y + 30)
+    .text(orderDetails.paymentStatus || "N/A", 150, y + 30);
 
   doc
     .fillColor(red)

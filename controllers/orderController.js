@@ -31,11 +31,24 @@ export const createOrder = async (req, res) => {
       email,
       mobileNumber,
       pricingDetails,
+      street,
+      state,
+      district,
+      landmark,
+      zipCode,
+      userType,
+      shopName,
     } = req.body;
     console.log("Request body:", req.body);
     // Basic validation
-    if (!albumName || !paperType || !albumSize || !orderDate || !orderNo) {
+    if (!albumName || !paperType || !albumSize || !orderDate || !orderNo || !userType) {
       return res.status(400).json({ message: "Please fill in all required fields" });
+    }
+
+    if(deliveryOption == 'courier'){
+      if (!street || !landmark || !district || !state || !zipCode) {
+        return res.status(400).json({ message: "Please provide complete delivery address" });
+      }
     }
 
     const existingOrder = await Order.findOne({orderNo});
@@ -44,12 +57,14 @@ export const createOrder = async (req, res) => {
     }
 
     //validate email exist
-    // const userData = await User.findOne({ email });
-    // if (userData) {
-    //   if (userData.userType === "Professional") {
-    //     return res.status(409).json({ message: "Sorry, professional users cannot place orders. Please order from dashboard." });
-    //   }
-    // }
+    
+    const userData = await User.findOne({ email });
+    console.log("User data:", userData);
+    if (userData) {
+      if (userData.userType.toLocaleLowerCase() === "professional"  && userData.active === true && userType === "user") {
+        return res.status(409).json({ message: "Sorry, professional users cannot place orders. Please order from dashboard." });
+      }
+    }
 
     // Collect file paths
     const uploadedFiles = req.files?.map((file) =>
@@ -57,6 +72,7 @@ export const createOrder = async (req, res) => {
     ) || [];
 
     const pricingData = JSON.parse(pricingDetails || "{}");
+    const userShopName = shopName || (userData ? userData.shopName : "");
 
     // Create the order in DB
     const order = await Order.create({
@@ -65,7 +81,7 @@ export const createOrder = async (req, res) => {
       paperType,
       albumSize,
       designPrint,
-      sheetNumber,
+      sheets: sheetNumber,
       bagType,
       deliveryOption,
       orderDate,
@@ -88,26 +104,63 @@ export const createOrder = async (req, res) => {
         serviceTax: pricingData?.gst || 0,
         total: pricingData?.total || 0,
       },
+      userType,
+      shopName: userShopName,
+      deliveryAddress: {
+        street: street,
+        landmark: landmark,
+        city: district,
+        state: state,
+        zipCode: zipCode,
+      },
     });
 
     // Prepare order details text
     const orderDetails = `
+      Full Name: ${order.fullName}
+      Shop Name: ${order.shopName}
+      User Type: ${order.userType}
+      Email: ${order.email || "-"}
+      Mobile: ${order.mobile || "-"}
       Order No: ${order.orderNo}
+      Order Date: ${order.orderDate?.toLocaleDateString() || "-"}
+      Delivery Date: ${order.deliveryDate?.toLocaleDateString() || "-"}
       Album Name: ${order.albumName}
       Paper Type: ${order.paperType}
       Album Size: ${order.albumSize}
+      Sheet Number: ${order.sheetNumber}
       Design / Print: ${order.designPrint || "-"}
       Bag Type: ${order.bagType || "-"}
       Delivery Option: ${order.deliveryOption || "-"}
-      Order Date: ${order.orderDate}
-      Delivery Date: ${order.deliveryDate || "-"}
+
+      ${order.deliveryOption === "courier" ? 
+      `Delivery Address:
+        House No. / Village: ${order.deliveryAddress.street}
+        Landmark: ${order.deliveryAddress.landmark}
+        City: ${order.deliveryAddress.city}
+        State: ${order.deliveryAddress.state}
+        Zip Code: ${order.deliveryAddress.zipCode}
+        Country: ${order.deliveryAddress.country}
+      ` : ""
+      }
+
       Payment Method: ${order.paymentMethod || "-"}
       Advance Percent: ${order.advancePercent || "-"}
+      Payment Status: ${order.paymentStatus}
       Notes: ${order.notes || "-"}
-      Email: ${order.email || "-"}
-      Mobile: ${order.mobile || "-"}
+
+      Price Details:
+        Quantity: ${order.priceDetails.quantity}
+        Paper Rate: ₹${order.priceDetails.paperRate}
+        Binding Rate: ₹${order.priceDetails.bindingRate}
+        Bag Rate: ₹${order.priceDetails.bagRate}
+        Subtotal: ₹${order.priceDetails.subtotal}
+        GST: ₹${order.priceDetails.serviceTax}
+        Total: ₹${order.priceDetails.total}
+
       Uploaded Files: ${uploadedFiles.length ? uploadedFiles.join(", ") : "-"}
       `.trim();
+
 
     // Create uploads/order-{orderNo} folder
     const orderFolder = path.join(process.cwd(), "uploads", `order-${order.orderNo}`);
@@ -172,9 +225,9 @@ export const generateQRPayment=async(req, res)=>{
         note: `Order No: ${order.orderNo}`,
       });
 
-      console.log("QR Code generated successfully", qrCode);
+      // console.log("QR Code generated successfully", qrCode);
 
-      console.log("QR Code generated successfully");
+      // console.log("QR Code generated successfully");
       return res.status(201).json({
         order,
         ...qrCode,

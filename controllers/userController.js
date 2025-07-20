@@ -39,6 +39,11 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    const existingMobileNumber = await User.findOne({ mobileNumber });
+    if (existingMobileNumber) {
+      return res.status(400).json({ message: "Mobile number already exists" });
+    }
+
     const storedOtp = otps[email];
     if (!storedOtp || storedOtp.otp !== otp || storedOtp.expiresAt < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -522,6 +527,29 @@ export const resetPassword = async (req, res) => {
   } catch (err) {
     console.error("Reset password error:", err);
     res.status(500).json({ message: "Failed to reset password" });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  const { email, name, mobileNumber, shopName } = req.body;
+
+  if (!email || !name || !mobileNumber || !shopName) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.name = name;
+    user.mobileNumber = mobileNumber;
+    user.shopName = shopName;
+    await user.save();
+
+    res.status(200).json({ message: "Profile updated successfully" });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ message: "Failed to update profile" });
   }
 };
 

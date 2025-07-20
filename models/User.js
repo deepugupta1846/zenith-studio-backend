@@ -33,6 +33,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  shopAddress: {
+    street: { type: String, default: "" },
+    landmark: { type: String, default: "" },
+    city: { type: String, default: "" },
+    state: { type: String, default: "" },
+    zipCode: { type: String, default: "" },
+    country: { type: String, default: "India" },
+  },
   active: {
     type: Boolean,
     default: true,

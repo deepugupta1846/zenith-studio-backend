@@ -18,8 +18,18 @@ const orderSchema = new mongoose.Schema(
     advancePercent: { type: Number },
     notes: { type: String },
     email: { type: String },
-    mobile: {type: String},
-    uploadedFiles: [{ type: String }], // Store file URLs or names
+    mobile: { type: String },
+    userType: { type: String, enum: ['user', 'retailer', 'professional', 'Professional'], default: 'user' },
+    shopName: { type: String, default: "" },
+    deliveryAddress: {
+      street: { type: String, },
+      landmark: { type: String, },
+      city: { type: String, },
+      state: { type: String, },
+      zipCode: { type: String, },
+      country: { type: String, default: "India"}
+    },
+    uploadedFiles: [{ type: String }],
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     paymentStatus: {
       type: String,
@@ -34,7 +44,7 @@ const orderSchema = new mongoose.Schema(
       utr_number: String,
     },
     priceDetails:{
-      quantity: { type: Number, required: true },
+      quantity: { type: Number, required: true, },
       paperRate: { type: Number, required: true },
       bindingRate: { type: Number, default: 0 },
       bagRate: { type: Number, required: true },
@@ -53,6 +63,26 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+orderSchema.pre('validate', function (next) {
+  if (this.deliveryOption === 'courier') {
+    const address = this.deliveryAddress || {};
+    const requiredFields = ['street', 'landmark', 'city', 'state', 'zipCode', 'country'];
+
+    const missingFields = requiredFields.filter(
+      (field) => !address[field] || address[field].trim() === ''
+    );
+
+    if (missingFields.length > 0) {
+      return next(
+        new mongoose.Error.ValidationError(
+          new Error(`Delivery address is required for courier: Missing ${missingFields.join(', ')}`)
+        )
+      );
+    }
+  }
+  next();
+});
 
 const Order = mongoose.model("Order", orderSchema);
 

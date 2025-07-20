@@ -12,6 +12,7 @@ import {
   resetPassword,
   sendForgotPasswordOtp,
   deleteUser,
+  updateProfile,
 } from "../controllers/userController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -29,5 +30,6 @@ router.get("/get-all-users", protect, getAllUsers);
 router.post("/send-reset-otp", sendForgotPasswordOtp);
 router.post("/reset-password", resetPassword);
 router.delete("/user/:id", protect, deleteUser);
+router.put("/user", protect, updateProfile);
 
 export default router;
