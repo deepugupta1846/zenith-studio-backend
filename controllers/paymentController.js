@@ -114,6 +114,21 @@ export const verifyPayment = async (req, res) => {
   }
 };
 
+export const getAllTransactions = async (req, res) => {
+  try {
+    const payments = await razorpay.payments.all({ count: 100 });
+
+    res.status(200).json({
+      success: true,
+      payments: payments.items, // array of payments
+    });
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch transactions" });
+  }
+};
+
+
 
 export const sendMail = async ({ to, subject, html, attachments = [] }) => {
   const transporter = nodemailer.createTransport({
