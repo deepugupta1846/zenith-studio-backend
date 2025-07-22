@@ -447,3 +447,54 @@ export const generateQrCode = async (paymentData) => {
     throw new Error("Failed to generate UPI QR code");
   }
 };
+
+export const sendPaymentReminder = async (order) => {
+  try {
+    const {
+      email,
+      fullName: customerName,
+      priceDetails,
+      notes,
+      orderNo,
+    } = order;
+
+    const amountDue = priceDetails?.total || 0;
+
+    // 1. UPI Details (hardcoded or dynamic if needed)
+    const upiId = "paytmqr5wvv4d@ptm";
+    const upiName = "RAVINDER SINGH DHILL";
+    const paymentNote = notes || "Album Payment";
+
+    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(
+      upiName
+    )}&am=${amountDue}&cu=INR&tn=${encodeURIComponent(paymentNote)}`;
+
+    // 2. Generate QR Code from UPI URL
+    const qrCode = await QRCode.toDataURL(upiUrl);
+
+    // 3. HTML Email
+    const html = `
+      <h2>Payment Reminder for Order No: ${orderNo}</h2>
+      <p>Hello ${customerName},</p>
+      <p>This is a kind reminder that your payment of <strong>₹${amountDue}</strong> is still pending.</p>
+      <p>You can scan the QR code below or click the UPI link to complete the payment.</p>
+      <img src="${qrCode}" alt="UPI QR Code" width="200" style="margin-top: 10px"/>
+      <p><a href="${upiUrl}">Click here to pay via UPI</a></p>
+      <p>Note: ${paymentNote}</p>
+      <br/>
+      <p>Thank you,<br/>Album Studio</p>
+    `;
+
+    // 4. Send Mail
+    await sendMail({
+      to: email,
+      subject: `Payment Reminder for Order #${orderNo}`,
+      html,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send payment reminder:", error);
+    throw new Error("Reminder email failed");
+  }
+};

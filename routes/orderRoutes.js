@@ -9,6 +9,7 @@ import {
   updatePaymentByOrderNo,
   generateQRPayment,
   getOrderDetails,
+  sendPaymentReminder,
 } from "../controllers/orderController.js";
 import {downloadOrderFiles, upload} from "../middlewares/uploadMiddleware.js";
 
@@ -25,5 +26,6 @@ router.post("/user", getOrderByUser);
 router.get("/download/:orderNo", downloadOrderFiles);
 router.post("/payment/update", updatePaymentByOrderNo);
 router.post("/make-qr-payment", generateQRPayment);
+router.post("/send-reminder", sendPaymentReminder )
 
 export default router;
