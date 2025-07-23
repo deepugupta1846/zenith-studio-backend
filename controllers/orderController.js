@@ -38,6 +38,7 @@ export const createOrder = async (req, res) => {
       zipCode,
       userType,
       shopName,
+      advanceAmount
     } = req.body;
     console.log("Request body:", req.body);
     // Basic validation
@@ -102,6 +103,7 @@ export const createOrder = async (req, res) => {
         bagRate: pricingData?.bagRate || 0,
         subtotal: pricingData?.subtotal || 0,
         serviceTax: pricingData?.gst || 0,
+        advanceAmount: advanceAmount || 0,
         total: pricingData?.total || 0,
       },
       userType,
@@ -156,6 +158,7 @@ export const createOrder = async (req, res) => {
         Bag Rate: ₹${order.priceDetails.bagRate}
         Subtotal: ₹${order.priceDetails.subtotal}
         GST: ₹${order.priceDetails.serviceTax}
+        Advance Amount: ₹${order.priceDetails.advanceAmount}
         Total: ₹${order.priceDetails.total}
 
       Uploaded Files: ${uploadedFiles.length ? uploadedFiles.join(", ") : "-"}
@@ -181,7 +184,7 @@ export const createOrder = async (req, res) => {
       const qrCode = await generateQrCode({
         upiId: "paytmqr5wvv4d@ptys",
         name: "RAVINDER SINGH DHILL",
-        amount: order.priceDetails.total,
+        amount: order.priceDetails.advanceAmount || order.priceDetails.total,
         note: `Order No: ${order.orderNo}`,
       });
 
@@ -193,13 +196,12 @@ export const createOrder = async (req, res) => {
         ...qrCode,
       });
     }
-
     // Send response
     res.status(201).json({
       order,
       paymentRedirect: "/api/payment/create-order",
       suggestedPaymentDetails: {
-        amount: order.priceDetails.total,
+        amount: order.priceDetails.advanceAmount || order.priceDetails.total,
         currency: "INR",
         receipt: `receipt_order_${order.orderNo}`,
         notes: {

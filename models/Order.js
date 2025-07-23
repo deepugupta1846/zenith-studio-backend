@@ -50,6 +50,7 @@ const orderSchema = new mongoose.Schema(
       bagRate: { type: Number, required: true },
       subtotal: { type: Number, required: true },
       serviceTax: { type: Number, required: true },
+      advanceAmount: { type: Number, default: 0 },
       total: { type: Number, required: true },
     },
     downloadFile: { type: Boolean, default: false },
@@ -59,7 +60,7 @@ const orderSchema = new mongoose.Schema(
       default: 'Pending'
     },
     sheets: { type: Number, default: 0 },
-    active: { type: Boolean, default: true }
+    active: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

@@ -259,17 +259,17 @@ export const generateReceiptPDF = (paymentDetails, orderDetails, isReceipt = fal
   doc
     .font("Helvetica")
     .text("Subtotal", 400, y)
-    .text(orderDetails.priceDetails.subtotal?.toFixed(2) || "0.00", 470, y, { align: "right" });
+    .text(orderDetails.priceDetails?.subtotal?.toFixed(2) || "0.00", 470, y, { align: "right" });
 
   y += 15;
   doc.text("Service Tax", 400, y);
-  doc.text(orderDetails.priceDetails.serviceTax?.toFixed(2) || "0.00", 470, y, { align: "right" });
+  doc.text(orderDetails.priceDetails?.serviceTax?.toFixed(2) || "0.00", 470, y, { align: "right" });
 
   y += 20;
   doc
     .font("Helvetica-Bold")
     .text("Total", 400, y)
-    .text(`${orderDetails.priceDetails.total?.toFixed(2) || "0.00"}/-`, 470, y, { align: "right" });
+    .text(`${orderDetails.priceDetail?.total?.toFixed(2) || "0.00"}/-`, 470, y, { align: "right" });
 
   // Payment Info
   y += 40;
