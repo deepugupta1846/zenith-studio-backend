@@ -8,7 +8,7 @@ const priceSchema = new mongoose.Schema({
   },
   userType: {
     type: String,
-    enum: ["user", "admin", "retailer", "professional"],
+    enum: ["user", "admin", "retailer", "professional", "Professional"],
     required: true,
   },
   paperSize: {
@@ -20,9 +20,21 @@ const priceSchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
+  glossySheetPrice: {
+    type: Number,
+    required: true,
+    default: 0,
+    min: 0,
+  },
   ntrPaperPrice: {
     type: Number,
     required: true,
+    min: 0,
+  },
+  ntrSheetPrice: {
+    type: Number,
+    required: true,
+    default: 0,
     min: 0,
   },
   bindingPrice: {

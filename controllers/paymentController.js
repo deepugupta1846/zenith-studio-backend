@@ -97,7 +97,7 @@ export const verifyPayment = async (req, res) => {
         <p>Your receipt for the album order is attached.</p>
         <p><strong>Order No:</strong> ${orderDetails.orderNo}</p>
         <p>We'll contact you once the album is ready for delivery.</p>
-        <p>~ Album Studio</p>
+        <p>~ Zenith Studio</p>
       `,
       attachments: [
         {
@@ -140,7 +140,7 @@ export const sendMail = async ({ to, subject, html, attachments = [] }) => {
   });
 
   await transporter.sendMail({
-    from: `"Album Studio" <${process.env.MAIL_USER}>`,
+    from: `"Zenith Studio" <${process.env.MAIL_USER}>`,
     to,
     subject,
     html,
@@ -162,23 +162,33 @@ export const generateReceiptPDF = (paymentDetails, orderDetails, isReceipt = fal
   doc.pipe(stream);
 
   const red = "#ce181e";
-  const gray = "#f5f5f5";
   const black = "#000";
 
   // Header
   doc
     .fillColor(red)
     .fontSize(18)
-    .text("Zenith Studio", { align: "left" })
-    .fillColor(black)
+    .font("Helvetica-Bold")
+    .text("Zenith Studio", 50, 50)
     .fontSize(10)
-    .text("Peer Mansoor Road,")
-    .text("Gaya, Bihar 823001");
+    .fillColor(black)
+    .text("Peer Mansoor Road,", 50, 70)
+    .text("Gaya, Bihar 823001", 50, 85);
 
+  doc
+    .fontSize(10)
+    .fillColor(black)
+    .text("GSTIN-10ACOPD1076D2Z8", 400, 50, { align: "right" });
+
+  doc
+    .font("Helvetica")
+    .text(`Order No: ${orderDetails.orderNo}`, 400, 70)
+    .text(`Order Date: ${new Date(orderDetails.orderDate).toLocaleDateString()}`, 400, 85)
+    .text(`Delivery Date: ${new Date(orderDetails.deliveryDate).toLocaleDateString()}`, 400, 100);
+
+  // Customer Info
   doc.moveDown();
-
-  // Customer Info Section
-  const topY = doc.y;
+  const topY = 130;
   doc
     .fillColor(red)
     .font("Helvetica-Bold")
@@ -186,129 +196,91 @@ export const generateReceiptPDF = (paymentDetails, orderDetails, isReceipt = fal
     .fillColor(black)
     .font("Helvetica")
     .text(`Name: ${orderDetails.fullName || "N/A"}`, 50, topY + 15)
-    .text(`Mobile: ${orderDetails.mobile || "N/A"}`, 50, topY + 30)
-    .text(`Email: ${orderDetails.email || "N/A"}`, 50, topY + 45)
-    .text(`Order No: ${orderDetails.orderNo}`, 300, topY + 15)
-    .text(`Order Date: ${new Date(orderDetails.orderDate).toLocaleDateString()}`, 300, topY + 30)
-    .text(`Delivery Date: ${new Date(orderDetails.deliveryDate).toLocaleDateString()}`, 300, topY + 45);
-    if(orderDetails.deliveryOption === 'courier'){
-      doc
-        .text(`Address: ${orderDetails.deliveryAddress.street || ""}, ${orderDetails.deliveryAddress.landmark || ""}, ${orderDetails.deliveryAddress.city || ""}, ${orderDetails.deliveryAddress.state || ""}, ${orderDetails.deliveryAddress.zipCode || ""}`, 50, topY + 60)
-        .text(`Country: ${orderDetails.deliveryAddress.country || "India"}`, 50, topY + 75);
-    }
-  doc.moveDown(5);
+    .text(`Shop: ${orderDetails.shopName || "N/A"}`, 50, topY + 30)
+    .text(`Mobile: ${orderDetails.mobile || "N/A"}`, 50, topY + 45)
+    .text(`Email: ${orderDetails.email || "N/A"}`, 50, topY + 60);
 
   // Table Headers
-  const tableY = doc.y + 10;
+  const tableTop = topY + 90;
   doc
     .fillColor(red)
     .font("Helvetica-Bold")
-    .text("Qty", 50, tableY)
-    .text("Description", 100, tableY)
-    .text("Unit Price", 350, tableY)
-    .text("Amount", 450, tableY);
+    .text("Name", 50, tableTop)
+    .text("Type", 170, tableTop)
+    .text("Paper", 250, tableTop)
+    .text("Qty", 320, tableTop)
+    .text("Unit Price", 390, tableTop)
+    .text("Amount", 480, tableTop);
 
-  doc.moveTo(50, tableY + 15).lineTo(550, tableY + 15).stroke(red);
+  doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke(red);
 
-  // Table Data
-  let y = tableY + 25;
-  const items = [];
+  // Table Row
+  const { quantity = 1, paperRate = 0, paperType = "Glossy", albumName = "N/A" } = orderDetails.priceDetails || {};
+  const rowY = tableTop + 30;
 
-  const { quantity = 1, paperRate = 0, bindingRate = 0, bagRate = 0 } = orderDetails.priceDetails || {};
-
-  if (paperRate > 0) {
-    items.push({
-      qty: quantity,
-      description: `${orderDetails.albumName || "Album"} - Paper (${orderDetails.paperType || "N/A"})`,
-      unitPrice: paperRate,
-      total: paperRate * quantity,
-    });
-  }
-
-  if (bindingRate > 0) {
-    items.push({
-      qty: quantity,
-      description: `Binding`,
-      unitPrice: bindingRate,
-      total: bindingRate * quantity,
-    });
-  }
-
-  if (bagRate > 0) {
-    items.push({
-      qty: quantity,
-      description: `Bag Type: ${orderDetails.bagType || "N/A"}`,
-      unitPrice: bagRate,
-      total: bagRate * quantity,
-    });
-  }
-
-  items.forEach((item) => {
-    doc
-      .fillColor(black)
-      .font("Helvetica")
-      .text(item.qty, 50, y)
-      .text(item.description, 100, y)
-      .text(item.unitPrice.toFixed(2), 350, y)
-      .text(item.total.toFixed(2), 450, y);
-    y += 20;
-  });
-
-  // Totals
-  y += 10;
   doc
-    .font("Helvetica")
-    .text("Subtotal", 400, y)
-    .text(orderDetails.priceDetails?.subtotal?.toFixed(2) || "0.00", 470, y, { align: "right" });
-
-  y += 15;
-  doc.text("Service Tax", 400, y);
-  doc.text(orderDetails.priceDetails?.serviceTax?.toFixed(2) || "0.00", 470, y, { align: "right" });
-
-  y += 20;
-  doc
-    .font("Helvetica-Bold")
-    .text("Total", 400, y)
-    .text(`${orderDetails.priceDetail?.total?.toFixed(2) || "0.00"}/-`, 470, y, { align: "right" });
-
-  // Payment Info
-  y += 40;
-  doc
-    .fillColor(red)
-    .font("Helvetica-Bold")
-    .text("Payment Method", 50, y)
     .fillColor(black)
     .font("Helvetica")
-    .text(orderDetails.paymentMethod || "N/A", 50, y + 15)
-    .text("Payment Status:", 50, y + 30)
-    .text(orderDetails.paymentStatus || "N/A", 150, y + 30);
+    .text(orderDetails.albumName, 50, rowY)
+    .text(orderDetails.designPrint == "print_design" ? "Print & design" : "Only print", 170, rowY)
+    .text(orderDetails.paperType, 250, rowY)
+    .text(`${quantity} ${orderDetails.sheets > 0 && orderDetails.designPrint == "print_design" ? "Sheets" : "Paper"}`, 320, rowY)
+    .text(orderDetails.priceDetails.paperRate.toFixed(2), 400, rowY)
+    .text((orderDetails.priceDetails.paperRate * quantity).toFixed(2), 480, rowY);
 
+   // Total
+  const bagY = rowY + 40;
+  doc
+    .font("Helvetica-Bold")
+    .text("Bag ", 400, bagY)
+    .text(orderDetails.priceDetails.bagRate.toFixed(2), 480, bagY)
+
+    // Total
+  const totalY = rowY + 60;
+  doc
+    .font("Helvetica-Bold")
+    .text("Total", 400, totalY)
+    .text(`${(orderDetails.priceDetails.total).toFixed(2)}/-`, 480, totalY);
+
+  // Payment Section
+  const payY = totalY + 60;
   doc
     .fillColor(red)
     .font("Helvetica-Bold")
-    .text("Notes", 300, y)
+    .text("Payment Method", 50, payY)
     .fillColor(black)
     .font("Helvetica")
-    .text(orderDetails.notes || "N/A", 300, y + 15);
+    .text(orderDetails.paymentMethod || "N/A", 50, payY + 15)
+    .text(`Transaction Id-${orderDetails.paymentMethod == "QR Code Payment" ? orderDetails.paymentInfo.utr_number : orderDetails.paymentInfo.razorpay_payment_id}`, 50, payY + 30)
+    .text(`Payment Date-${orderDetails.paymentInfo.paymentDate}`, 50, payY + 45)
+    .text(`Advance Amount-${orderDetails.priceDetails.advanceAmount?.toFixed(2)}`, 50, payY + 60)
+    .text(`Balance Amount-${orderDetails.priceDetails.total?.toFixed(2)}`, 50, payY + 75);
 
-  // Terms
-  y += 60;
+  // Notes Section
   doc
-    .moveTo(50, y)
-    .lineTo(550, y)
+    .fillColor(red)
+    .font("Helvetica-Bold")
+    .text("Notes", 300, payY)
+    .fillColor(black)
+    .font("Helvetica")
+    .text(orderDetails.notes || "N/A", 300, payY + 15);
+
+  // Terms & Conditions
+  const termsY = payY + 90;
+  doc
+    .moveTo(50, termsY)
+    .lineTo(550, termsY)
     .stroke(red);
-  y += 10;
 
   doc
     .fillColor(red)
     .font("Helvetica-Bold")
-    .text("Terms & Conditions", 50, y);
-
-  doc
+    .text("Terms & Conditions", 50, termsY + 10)
     .fillColor(black)
     .font("Helvetica")
-    .text("Payment is due within 15 days", 50, y + 15)
-    .text("Please make checks payable to: ravzenith57@gmail.com", 50, y + 30);
+    .text("Payment is due within 15 days", 50, termsY + 25)
+    .text("Please make checks payable to: ravzenith57@gmail.com", 50, termsY + 40)
+    .text("Colour matching is not guaranteed on reprints", 50, termsY + 55);
 
   doc.end();
   return filePath;

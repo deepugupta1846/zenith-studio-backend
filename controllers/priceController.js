@@ -5,8 +5,8 @@ import Price from "../models/Price.js";
 // @access  Admin
 export const createPrice = async (req, res) => {
   try {
-    const { albumType, userType, glossyPaperPrice, ntrPaperPrice, bindingPrice, bagPrice, bagType, serviceTax, paperSize } = req.body;
-
+    const { albumType, userType, glossyPaperPrice, ntrPaperPrice, bindingPrice, bagPrice, bagType, serviceTax, paperSize, glossySheetPrice, ntrSheetPrice } = req.body;
+    console.log("Creating price entry with data:", req.body )
     if (!albumType || !userType || glossyPaperPrice == null || ntrPaperPrice == null || bindingPrice == null || bagPrice == null || bagType == null || serviceTax == null || paperSize == null) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -25,7 +25,9 @@ export const createPrice = async (req, res) => {
       bagPrice,
       bagType,
       serviceTax,
-      paperSize
+      paperSize,
+      glossySheetPrice,
+      ntrSheetPrice
     });
 
     res.status(201).json(price);
@@ -65,22 +67,28 @@ export const getPriceById = async (req, res) => {
 // @access  Admin
 export const updatePrice = async (req, res) => {
   try {
-    const { glossyPaperPrice, ntrPaperPrice, bindingPrice } = req.body;
+    const updates = req.body;
     const price = await Price.findById(req.params.id);
 
-    if (!price) return res.status(404).json({ message: "Price not found" });
+    if (!price) {
+      return res.status(404).json({ message: "Price not found" });
+    }
 
-    price.glossyPaperPrice = glossyPaperPrice ?? price.glossyPaperPrice;
-    price.ntrPaperPrice = ntrPaperPrice ?? price.ntrPaperPrice;
-    price.bindingPrice = bindingPrice ?? price.bindingPrice;
+    // Apply updates dynamically
+    for (let key in updates) {
+      if (updates[key] !== undefined) {
+        price[key] = updates[key];
+      }
+    }
 
     const updated = await price.save();
     res.json(updated);
   } catch (error) {
-    console.error(error);
+    console.error("Update Price Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // @desc    Delete price
 // @route   DELETE /api/prices/:id
