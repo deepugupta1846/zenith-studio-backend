@@ -6,6 +6,7 @@ import archiver from "archiver";
 import QRCode from "qrcode";
 import { generateReceiptPDF, sendMail } from "./paymentController.js";
 import User from "../models/User.js";
+import { uploadBufferToCloudinary } from "../middlewares/uploadToClaudinary.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,42 +41,97 @@ export const createOrder = async (req, res) => {
       shopName,
       advanceAmount
     } = req.body;
-    console.log("Request body:", req.body);
-    // Basic validation
+
     if (!albumName || !paperType || !albumSize || !orderDate || !orderNo || !userType) {
       return res.status(400).json({ message: "Please fill in all required fields" });
     }
 
-    if(deliveryOption == 'courier'){
-      if (!street || !landmark || !district || !state || !zipCode) {
-        return res.status(400).json({ message: "Please provide complete delivery address" });
-      }
+    if (deliveryOption === 'courier' && (!street || !landmark || !district || !state || !zipCode)) {
+      return res.status(400).json({ message: "Please provide complete delivery address" });
     }
 
-    const existingOrder = await Order.findOne({orderNo});
+    const existingOrder = await Order.findOne({ orderNo });
     if (existingOrder) {
-      return res.status(409).json({ message: "Sorry, This order already exist." });
+      return res.status(409).json({ message: "This order already exists." });
     }
 
-    //validate email exist
-    
     const userData = await User.findOne({ email });
-    console.log("User data:", userData);
-    if (userData) {
-      if (userData.userType.toLocaleLowerCase() === "professional"  && userData.active === true && userType === "user") {
-        return res.status(409).json({ message: "Sorry, professional users cannot place orders. Please order from dashboard." });
-      }
+    if (userData?.userType.toLowerCase() === "professional" && userData.active && userType === "user") {
+      return res.status(409).json({ message: "Professional users must order from dashboard." });
     }
-
-    // Collect file paths
-    const uploadedFiles = req.files?.map((file) =>
-      `/uploads/${path.relative(path.join(__dirname, "uploads"), file.path).replace(/\\/g, "/")}`
-    ) || [];
 
     const pricingData = JSON.parse(pricingDetails || "{}");
     const userShopName = shopName || (userData ? userData.shopName : "");
 
-    // Create the order in DB
+        // 1. Generate text content from order details
+    const noteContent = `
+    Full Name: ${fullName}
+    Album Name: ${albumName}
+    Paper Type: ${paperType}
+    Album Size: ${albumSize}
+    Sheet Number: ${sheetNumber}
+    Design Print: ${designPrint}
+    Bag Type: ${bagType}
+    Delivery Option: ${deliveryOption}
+    Order Date: ${orderDate}
+    Delivery Date: ${deliveryDate}
+    Order No: ${orderNo}
+    Payment Method: ${paymentMethod}
+    Advance Percent: ${advancePercent}
+    Advance Amount: ${advanceAmount}
+    Notes: ${notes}
+    Email: ${email}
+    Mobile Number: ${mobileNumber}
+    Shop Name: ${userShopName}
+    Street: ${street}
+    Landmark: ${landmark}
+    District: ${district}
+    State: ${state}
+    Zip Code: ${zipCode}
+    User Type: ${userType}
+
+    Pricing Details:
+      Quantity: ${pricingData?.qty || 1}
+      Paper Rate: ${pricingData?.paperRate || 0}
+      Binding Rate: ${pricingData?.binding || 0}
+      Bag Rate: ${pricingData?.bagRate || 0}
+      Subtotal: ${pricingData?.subtotal || 0}
+      GST: ${pricingData?.gst || 0}
+      Advance Amount: ${advanceAmount || 0}
+      Total: ${pricingData?.total || 0}
+    `;
+
+    // 2. Convert note content into buffer
+    const noteBuffer = Buffer.from(noteContent, "utf-8");
+
+    // 3. Upload to Cloudinary under the same order folder
+    const noteUpload = await uploadBufferToCloudinary(
+      noteBuffer,
+      "notes.txt",
+      `orders/order-${orderNo}`
+    );
+    const noteFileUrl = noteUpload.secure_url;
+
+    // Upload files directly to Cloudinary from memory
+    const uploadedFiles = [];
+
+    if (req.files?.length) {
+      for (const file of req.files) {
+        const result = await uploadBufferToCloudinary(
+          file.buffer,
+          file.originalname,
+          `orders/order-${orderNo}`
+        );
+        uploadedFiles.push(result.secure_url);
+      }
+    }
+
+    // Upload note file URL to order
+    if (noteFileUrl) {
+      uploadedFiles.push(noteFileUrl);
+    }
+
+    // Create Order
     const order = await Order.create({
       fullName,
       albumName,
@@ -109,78 +165,20 @@ export const createOrder = async (req, res) => {
       userType,
       shopName: userShopName,
       deliveryAddress: {
-        street: street,
-        landmark: landmark,
+        street,
+        landmark,
         city: district,
-        state: state,
-        zipCode: zipCode,
+        state,
+        zipCode,
       },
     });
 
-    // Prepare order details text
-    const orderDetails = `
-      Full Name: ${order.fullName}
-      Shop Name: ${order.shopName}
-      User Type: ${order.userType}
-      Email: ${order.email || "-"}
-      Mobile: ${order.mobile || "-"}
-      Order No: ${order.orderNo}
-      Order Date: ${order.orderDate?.toLocaleDateString() || "-"}
-      Delivery Date: ${order.deliveryDate?.toLocaleDateString() || "-"}
-      Album Name: ${order.albumName}
-      Paper Type: ${order.paperType}
-      Album Size: ${order.albumSize}
-      Sheet Number: ${order.sheetNumber}
-      Design / Print: ${order.designPrint || "-"}
-      Bag Type: ${order.bagType || "-"}
-      Delivery Option: ${order.deliveryOption || "-"}
-
-      ${order.deliveryOption === "courier" ? 
-      `Delivery Address:
-        House No. / Village: ${order.deliveryAddress.street}
-        Landmark: ${order.deliveryAddress.landmark}
-        City: ${order.deliveryAddress.city}
-        State: ${order.deliveryAddress.state}
-        Zip Code: ${order.deliveryAddress.zipCode}
-        Country: ${order.deliveryAddress.country}
-      ` : ""
-      }
-
-      Payment Method: ${order.paymentMethod || "-"}
-      Advance Percent: ${order.advancePercent || "-"}
-      Payment Status: ${order.paymentStatus}
-      Notes: ${order.notes || "-"}
-
-      Price Details:
-        Quantity: ${order.priceDetails.quantity}
-        Paper Rate: ₹${order.priceDetails.paperRate}
-        Binding Rate: ₹${order.priceDetails.bindingRate}
-        Bag Rate: ₹${order.priceDetails.bagRate}
-        Subtotal: ₹${order.priceDetails.subtotal}
-        GST: ₹${order.priceDetails.serviceTax}
-        Advance Amount: ₹${order.priceDetails.advanceAmount}
-        Total: ₹${order.priceDetails.total}
-
-      Uploaded Files: ${uploadedFiles.length ? uploadedFiles.join(", ") : "-"}
-      `.trim();
-
-
-    // Create uploads/order-{orderNo} folder
-    const orderFolder = path.join(process.cwd(), "uploads", `order-${order.orderNo}`);
-    if (!fs.existsSync(orderFolder)) {
-      fs.mkdirSync(orderFolder, { recursive: true });
+    // Response
+    if (order.paymentMethod === "Cash Payment") {
+      return res.status(200).json({ message: "Your order has been placed." });
     }
 
-    // Write details.txt inside the folder
-    const detailsFilePath = path.join(orderFolder, "details.txt");
-    fs.writeFileSync(detailsFilePath, orderDetails, "utf-8");
-
-    if(order.paymentMethod == "Cash Payment"){
-     return res.status(200).json({ message: "Congratulation, Your order has been placed." });
-    }
-
-    if (order.paymentMethod == "QR Code Payment") {
-      // Generate UPI QR code
+    if (order.paymentMethod === "QR Code Payment") {
       const qrCode = await generateQrCode({
         upiId: "paytmqr5wvv4d@ptys",
         name: "RAVINDER SINGH DHILL",
@@ -188,15 +186,9 @@ export const createOrder = async (req, res) => {
         note: `Order No: ${order.orderNo}`,
       });
 
-      console.log("QR Code generated successfully", qrCode);
-
-      console.log("QR Code generated successfully");
-      return res.status(201).json({
-        order,
-        ...qrCode,
-      });
+      return res.status(201).json({ order, ...qrCode });
     }
-    // Send response
+
     res.status(201).json({
       order,
       paymentRedirect: "/api/payment/create-order",
