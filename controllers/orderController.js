@@ -407,8 +407,10 @@ export const deleteOrder = async (req, res) => {
     }
 
     // 2️⃣ Soft delete: update active to false
-    order.active = false;
-    await order.save();
+    // order.active = false;
+    // await order.save();
+
+    await Order.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ success: true, message: "Order deleted" });
   } catch (err) {
