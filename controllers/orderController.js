@@ -429,8 +429,11 @@ export const generateQrCode = async (paymentData) => {
   }
 };
 
-export const sendPaymentReminder = async (order) => {
+export const sendPaymentReminder = async (req, res) => {
   try {
+    const {
+      order
+    } = req.body;
     const {
       email,
       fullName: customerName,
@@ -438,6 +441,7 @@ export const sendPaymentReminder = async (order) => {
       notes,
       orderNo,
     } = order;
+    console.log("Sending payment reminder for order:", orderNo, email);
 
     const amountDue = priceDetails?.total || 0;
 
@@ -446,25 +450,27 @@ export const sendPaymentReminder = async (order) => {
     const upiName = "RAVINDER SINGH DHILL";
     const paymentNote = notes || "Album Payment";
 
-    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(
-      upiName
-    )}&am=${amountDue}&cu=INR&tn=${encodeURIComponent(paymentNote)}`;
+     // UPI payment URI format
+  const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountDue}&cu=INR&tn=${encodeURIComponent(paymentNote)}`;
 
     // 2. Generate QR Code from UPI URL
     const qrCode = await QRCode.toDataURL(upiUrl);
-
+    
     // 3. HTML Email
     const html = `
-      <h2>Payment Reminder for Order No: ${orderNo}</h2>
-      <p>Hello ${customerName},</p>
-      <p>This is a kind reminder that your payment of <strong>₹${amountDue}</strong> is still pending.</p>
-      <p>You can scan the QR code below or click the UPI link to complete the payment.</p>
-      <img src="${qrCode}" alt="UPI QR Code" width="200" style="margin-top: 10px"/>
-      <p><a href="${upiUrl}">Click here to pay via UPI</a></p>
-      <p>Note: ${paymentNote}</p>
-      <br/>
-      <p>Thank you,<br/>Album Studio</p>
-    `;
+        <h2>Payment Reminder for Order No: ${orderNo}</h2>
+        <p>Hello ${customerName},</p>
+        <p>This is a kind reminder that your payment of <strong>₹${amountDue}</strong> is still pending.</p>
+        <p>You can log in to your dashboard to view and complete the payment for your order.</p>
+        <p>
+          <a href="https://zenithstudiogaya.in/login" style="display: inline-block; padding: 10px 20px; background-color: #ce181e; color: white; text-decoration: none; border-radius: 4px;">
+            Login to Dashboard
+          </a>
+        </p>
+        <p>Note: ${paymentNote}</p>
+        <br/> 
+        <p>Thank you,<br/>Zenith Studio</p>
+      `;
 
     // 4. Send Mail
     await sendMail({
@@ -473,9 +479,8 @@ export const sendPaymentReminder = async (order) => {
       html,
     });
 
-    return { success: true };
+    res.status(200).json({ success: true, message: "Payment reminder sent" });
   } catch (error) {
-    console.error("Failed to send payment reminder:", error);
-    throw new Error("Reminder email failed");
+    res.status(500).json({ success: false, message: "Failed to send payment reminder" });
   }
 };
