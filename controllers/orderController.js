@@ -60,76 +60,13 @@ export const createOrder = async (req, res) => {
       return res.status(409).json({ message: "Professional users must order from dashboard." });
     }
 
+     // Collect file paths
+    const uploadedFiles = req.files?.map((file) =>
+      `/uploads/${path.relative(path.join(__dirname, "uploads"), file.path).replace(/\\/g, "/")}`
+    ) || [];
+
     const pricingData = JSON.parse(pricingDetails || "{}");
     const userShopName = shopName || (userData ? userData.shopName : "");
-
-        // 1. Generate text content from order details
-    const noteContent = `
-    Full Name: ${fullName}
-    Album Name: ${albumName}
-    Paper Type: ${paperType}
-    Album Size: ${albumSize}
-    Sheet Number: ${sheetNumber}
-    Design Print: ${designPrint}
-    Bag Type: ${bagType}
-    Delivery Option: ${deliveryOption}
-    Order Date: ${orderDate}
-    Delivery Date: ${deliveryDate}
-    Order No: ${orderNo}
-    Payment Method: ${paymentMethod}
-    Advance Percent: ${advancePercent}
-    Advance Amount: ${advanceAmount}
-    Notes: ${notes}
-    Email: ${email}
-    Mobile Number: ${mobileNumber}
-    Shop Name: ${userShopName}
-    Street: ${street}
-    Landmark: ${landmark}
-    District: ${district}
-    State: ${state}
-    Zip Code: ${zipCode}
-    User Type: ${userType}
-
-    Pricing Details:
-      Quantity: ${pricingData?.qty || 1}
-      Paper Rate: ${pricingData?.paperRate || 0}
-      Binding Rate: ${pricingData?.binding || 0}
-      Bag Rate: ${pricingData?.bagRate || 0}
-      Subtotal: ${pricingData?.subtotal || 0}
-      GST: ${pricingData?.gst || 0}
-      Advance Amount: ${advanceAmount || 0}
-      Total: ${pricingData?.total || 0}
-    `;
-
-    // 2. Convert note content into buffer
-    const noteBuffer = Buffer.from(noteContent, "utf-8");
-
-    // 3. Upload to Cloudinary under the same order folder
-    const noteUpload = await uploadBufferToCloudinary(
-      noteBuffer,
-      "notes.txt",
-      `orders/order-${orderNo}`
-    );
-    const noteFileUrl = noteUpload.secure_url;
-
-    // Upload files directly to Cloudinary from memory
-    const uploadedFiles = [];
-
-    if (req.files?.length) {
-      for (const file of req.files) {
-        const result = await uploadBufferToCloudinary(
-          file.buffer,
-          file.originalname,
-          `orders/order-${orderNo}`
-        );
-        uploadedFiles.push(result.secure_url);
-      }
-    }
-
-    // Upload note file URL to order
-    if (noteFileUrl) {
-      uploadedFiles.push(noteFileUrl);
-    }
 
     // Create Order
     const order = await Order.create({
@@ -172,6 +109,54 @@ export const createOrder = async (req, res) => {
         zipCode,
       },
     });
+
+  const orderDetails = `
+    Full Name: ${fullName}
+    Album Name: ${albumName}
+    Paper Type: ${paperType}
+    Album Size: ${albumSize}
+    Sheet Number: ${sheetNumber}
+    Design Print: ${designPrint}
+    Bag Type: ${bagType}
+    Delivery Option: ${deliveryOption}
+    Order Date: ${orderDate}
+    Delivery Date: ${deliveryDate}
+    Order No: ${orderNo}
+    Payment Method: ${paymentMethod}
+    Advance Percent: ${advancePercent}
+    Advance Amount: ${advanceAmount}
+    Notes: ${notes}
+    Email: ${email}
+    Mobile Number: ${mobileNumber}
+    Shop Name: ${userShopName}
+    Street: ${street}
+    Landmark: ${landmark}
+    District: ${district}
+    State: ${state}
+    Zip Code: ${zipCode}
+    User Type: ${userType}
+
+    Pricing Details:
+      Quantity: ${pricingData?.qty || 1}
+      Paper Rate: ${pricingData?.paperRate || 0}
+      Binding Rate: ${pricingData?.binding || 0}
+      Bag Rate: ${pricingData?.bagRate || 0}
+      Subtotal: ${pricingData?.subtotal || 0}
+      GST: ${pricingData?.gst || 0}
+      Advance Amount: ${advanceAmount || 0}
+      Total: ${pricingData?.total || 0}
+    `.trim();
+
+    // Create uploads/order-{orderNo} folder
+    const orderFolder = path.join(process.cwd(), "uploads", `order-${order.orderNo}`);
+    if (!fs.existsSync(orderFolder)) {
+      fs.mkdirSync(orderFolder, { recursive: true });
+    }
+
+    // Write details.txt inside the folder
+    const detailsFilePath = path.join(orderFolder, "details.txt");
+    fs.writeFileSync(detailsFilePath, orderDetails, "utf-8");
+
 
     // Response
     if (order.paymentMethod === "Cash Payment") {
