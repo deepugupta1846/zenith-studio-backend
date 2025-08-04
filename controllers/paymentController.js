@@ -182,7 +182,7 @@ export const generateReceiptPDF = (paymentDetails, orderDetails, isReceipt = fal
 
   doc
     .font("Helvetica")
-    .text(`Order No: ${orderDetails.orderNo}`, 400, 70)
+    .text(`Track No: ${orderDetails.orderNo}`, 400, 70)
     .text(`Order Date: ${new Date(orderDetails.orderDate).toLocaleDateString()}`, 400, 85)
     .text(`Delivery Date: ${new Date(orderDetails.deliveryDate).toLocaleDateString()}`, 400, 100);
 
@@ -235,8 +235,24 @@ export const generateReceiptPDF = (paymentDetails, orderDetails, isReceipt = fal
     .text("Bag ", 400, bagY)
     .text(orderDetails.priceDetails.bagRate.toFixed(2), 480, bagY)
 
+    if(orderDetails.deliveryOption == 'courier'){
+    const courierY = rowY + 60;
+      doc
+        .font("Helvetica-Bold")
+        .text("Courier", 400, courierY)
+        .text(110.00, 480, courierY)
+    }
+    if(orderDetails.priceDetails.bindingRate>0){
+    const courierY = rowY + 80;
+      doc
+        .font("Helvetica-Bold")
+        .text("Binding ", 400, courierY)
+        .text(orderDetails.priceDetails.bindingRate.toFixed(2), 480, courierY)
+    }
+  
+
     // Total
-  const totalY = rowY + 60;
+  const totalY = rowY + 100;
   doc
     .font("Helvetica-Bold")
     .text("Total", 400, totalY)
