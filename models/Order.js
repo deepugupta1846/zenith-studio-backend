@@ -61,6 +61,7 @@ const orderSchema = new mongoose.Schema(
     },
     sheets: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
+    serialNo: { type: String, default:"ZN-2025-0000"},
   },
   { timestamps: true }
 );

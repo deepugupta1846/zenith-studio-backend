@@ -178,6 +178,11 @@ export const generateReceiptPDF = (paymentDetails, orderDetails, isReceipt = fal
   doc
     .fontSize(10)
     .fillColor(black)
+    .text(`#${orderDetails.serialNo}`, 400, 30, { align: "right" });
+
+  doc
+    .fontSize(10)
+    .fillColor(black)
     .text("GSTIN-10ACOPD1076D2Z8", 400, 50, { align: "right" });
 
   doc

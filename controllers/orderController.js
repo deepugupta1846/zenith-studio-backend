@@ -68,6 +68,26 @@ export const createOrder = async (req, res) => {
     const pricingData = JSON.parse(pricingDetails || "{}");
     const userShopName = shopName || (userData ? userData.shopName : "");
 
+    // Get current year
+    const currentYear = new Date().getFullYear();
+
+    // Find last order created this year with a serialNo
+    const lastOrder = await Order.findOne({ serialNo: { $regex: `^ZN-${currentYear}-` } })
+      .sort({ createdAt: -1 });
+    console.log(lastOrder)
+    // Extract last number and increment
+    let nextSerialNumber = 1;
+    if (lastOrder?.serialNo) {
+      const lastNumber = parseInt(lastOrder.serialNo.split("-")[2]);
+      console.log("lstNumber - ", lastNumber)
+      nextSerialNumber = lastNumber + 1;
+    }
+
+    console.log(nextSerialNumber)
+
+    // Format serial number
+    const serialNo = `ZN-${currentYear}-${String(nextSerialNumber).padStart(4, "0")}`;
+
     // Create Order
     const order = await Order.create({
       fullName,
@@ -108,6 +128,7 @@ export const createOrder = async (req, res) => {
         state,
         zipCode,
       },
+      serialNo
     });
 
   const orderDetails = `
@@ -121,14 +142,12 @@ export const createOrder = async (req, res) => {
     Delivery Option: ${deliveryOption}
     Order Date: ${orderDate}
     Delivery Date: ${deliveryDate}
-    Order No: ${orderNo}
+    Track No: ${orderNo}
+    Serial Number: ${serialNo}
     Payment Method: ${paymentMethod}
     Advance Percent: ${advancePercent}
     Advance Amount: ${advanceAmount}
     Notes: ${notes}
-    Email: ${email}
-    Mobile Number: ${mobileNumber}
-    Shop Name: ${userShopName}
     Street: ${street}
     Landmark: ${landmark}
     District: ${district}
