@@ -265,17 +265,22 @@ export const getOrderByUser = async (req, res) => {
   }
 };
 
-export const getOrderDetails = async (req, res)=>{
-   console.log(req.params.id)
+export const getOrderDetails = async (req, res) => {
+  const identifier = req.params.orderno; // can be orderNo or serialNo
   try {
-   
-    const orderDetails = await Order.findOne({orderNo: req.params.orderno})
-    if (!orderDetails) return res.status(404).json({ success: false, message: "Order not found" });
+    const orderDetails = await Order.findOne({
+      $or: [{ orderNo: identifier }, { serialNo: identifier }],
+    });
+
+    if (!orderDetails) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
     res.status(200).json({ success: true, order: orderDetails });
-  } catch (error) {
-    res.status(500).json({status: "failed", error: err.message})
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-}
+};
 
 
 // Update order
