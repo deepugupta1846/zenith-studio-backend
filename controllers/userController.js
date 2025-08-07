@@ -65,7 +65,7 @@ export const registerUser = async (req, res) => {
     if (user.userType === "Professional") {
       user.active = false; 
       const newUser = await User.create(user);
-      await sendAdminVerificationEmail(user);
+      await sendAdminVerificationEmail(newUser);
       return res.status(201).json({
         message: "User registered successfully. Please wait for admin approval.",
         status:"success"
