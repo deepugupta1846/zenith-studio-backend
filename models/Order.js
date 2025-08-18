@@ -51,6 +51,7 @@ const orderSchema = new mongoose.Schema(
       subtotal: { type: Number, required: true },
       serviceTax: { type: Number, required: true },
       advanceAmount: { type: Number, default: 0 },
+      cashPayment:{ type: Number, default: 0},
       total: { type: Number, required: true },
     },
     downloadFile: { type: Boolean, default: false },
