@@ -12,6 +12,7 @@ import authRoutes from "./routes/authRoutes.js";
 import { upload } from "./middlewares/uploadMiddleware.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import priceRoutes from "./routes/priceRoutes.js";
+import stockRoutes from "./routes/stockRoutes.js";
 
 // Config
 dotenv.config();
@@ -50,6 +51,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/price", priceRoutes);
+app.use("/api/stock", stockRoutes);
 
 // Start server
 app.listen(PORT, () => {
