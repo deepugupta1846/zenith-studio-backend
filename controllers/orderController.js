@@ -508,3 +508,211 @@ export const sendPaymentReminder = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to send payment reminder" });
   }
 };
+
+// New APIs for Admin Order Management
+
+// Get all users with their order summaries
+export const getAllUsersWithOrders = async (req, res) => {
+  try {
+    const users = await User.find({ active: true }).sort({ createdAt: -1 });
+    
+    const usersWithOrders = await Promise.all(
+      users.map(async (user) => {
+        const orders = await Order.find({ email: user.email });
+        
+        // Calculate payment summaries
+        const totalOrders = orders.length;
+        const totalAmount = orders.reduce((sum, order) => sum + (order.priceDetails?.total || 0), 0);
+        const totalPaid = orders.reduce((sum, order) => {
+          const paid = (order.priceDetails?.advanceAmount || 0) + (order.priceDetails?.cashPayment || 0);
+          return sum + paid;
+        }, 0);
+        const totalDues = totalAmount - totalPaid;
+        const pendingOrders = orders.filter(order => order.paymentStatus === 'Pending').length;
+        const completedOrders = orders.filter(order => order.paymentStatus === 'Paid').length;
+
+        return {
+          ...user.toObject(),
+          orderSummary: {
+            totalOrders,
+            totalAmount,
+            totalPaid,
+            totalDues,
+            pendingOrders,
+            completedOrders
+          }
+        };
+      })
+    );
+
+    res.status(200).json({ success: true, users: usersWithOrders });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Get user orders with detailed payment info
+export const getUserOrdersWithPayments = async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    const orders = await Order.find({ email }).sort({ createdAt: -1 });
+    
+    const ordersWithPaymentDetails = orders.map(order => {
+      const totalAmount = order.priceDetails?.total || 0;
+      const advanceAmount = order.priceDetails?.advanceAmount || 0;
+      const cashPayment = order.priceDetails?.cashPayment || 0;
+      const totalPaid = advanceAmount + cashPayment;
+      const dues = Math.max(totalAmount - totalPaid, 0);
+      
+      return {
+        ...order.toObject(),
+        paymentBreakdown: {
+          totalAmount,
+          advanceAmount,
+          cashPayment,
+          totalPaid,
+          dues,
+          paymentStatus: order.paymentStatus
+        }
+      };
+    });
+
+    res.status(200).json({ success: true, orders: ordersWithPaymentDetails });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Update cash payment for an order
+export const updateCashPayment = async (req, res) => {
+  try {
+    const { orderId, cashAmount } = req.body;
+    
+    if (!orderId || !cashAmount) {
+      return res.status(400).json({ success: false, message: "Order ID and cash amount are required" });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    // Update cash payment
+    order.priceDetails.cashPayment = (order.priceDetails.cashPayment || 0) + parseFloat(cashAmount);
+    
+    // Check if total payment is complete
+    const totalAmount = order.priceDetails.total || 0;
+    const totalPaid = (order.priceDetails.advanceAmount || 0) + order.priceDetails.cashPayment;
+    
+    if (totalPaid >= totalAmount) {
+      order.paymentStatus = 'Paid';
+    } else {
+      order.paymentStatus = 'Pending';
+    }
+
+    await order.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Cash payment updated successfully",
+      order: {
+        ...order.toObject(),
+        paymentBreakdown: {
+          totalAmount,
+          advanceAmount: order.priceDetails.advanceAmount || 0,
+          cashPayment: order.priceDetails.cashPayment,
+          totalPaid,
+          dues: Math.max(totalAmount - totalPaid, 0),
+          paymentStatus: order.paymentStatus
+        }
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Get overall payment statistics
+export const getPaymentStatistics = async (req, res) => {
+  try {
+    const orders = await Order.find();
+    
+    const stats = {
+      totalOrders: orders.length,
+      totalRevenue: orders.reduce((sum, order) => sum + (order.priceDetails?.total || 0), 0),
+      totalPaid: orders.reduce((sum, order) => {
+        const paid = (order.priceDetails?.advanceAmount || 0) + (order.priceDetails?.cashPayment || 0);
+        return sum + paid;
+      }, 0),
+      totalDues: 0,
+      pendingOrders: orders.filter(order => order.paymentStatus === 'Pending').length,
+      paidOrders: orders.filter(order => order.paymentStatus === 'Paid').length,
+      paymentMethods: {},
+      monthlyStats: {}
+    };
+
+    // Calculate total dues
+    stats.totalDues = stats.totalRevenue - stats.totalPaid;
+
+    // Payment method breakdown
+    orders.forEach(order => {
+      const method = order.paymentMethod || 'Unknown';
+      stats.paymentMethods[method] = (stats.paymentMethods[method] || 0) + 1;
+    });
+
+    // Monthly statistics
+    orders.forEach(order => {
+      const month = new Date(order.createdAt).toLocaleString('default', { month: 'long', year: 'numeric' });
+      if (!stats.monthlyStats[month]) {
+        stats.monthlyStats[month] = {
+          orders: 0,
+          revenue: 0,
+          paid: 0
+        };
+      }
+      stats.monthlyStats[month].orders++;
+      stats.monthlyStats[month].revenue += order.priceDetails?.total || 0;
+      stats.monthlyStats[month].paid += (order.priceDetails?.advanceAmount || 0) + (order.priceDetails?.cashPayment || 0);
+    });
+
+    res.status(200).json({ success: true, statistics: stats });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Bulk update payment status
+export const bulkUpdatePaymentStatus = async (req, res) => {
+  try {
+    const { orderIds, paymentStatus, cashAmount } = req.body;
+    
+    if (!orderIds || !Array.isArray(orderIds)) {
+      return res.status(400).json({ success: false, message: "Order IDs array is required" });
+    }
+
+    const updatePromises = orderIds.map(async (orderId) => {
+      const order = await Order.findById(orderId);
+      if (!order) return null;
+
+      if (cashAmount && cashAmount > 0) {
+        order.priceDetails.cashPayment = (order.priceDetails.cashPayment || 0) + parseFloat(cashAmount);
+      }
+
+      order.paymentStatus = paymentStatus;
+      await order.save();
+      return order;
+    });
+
+    const updatedOrders = await Promise.all(updatePromises);
+    const validOrders = updatedOrders.filter(order => order !== null);
+
+    res.status(200).json({ 
+      success: true, 
+      message: `${validOrders.length} orders updated successfully`,
+      updatedOrders: validOrders
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
