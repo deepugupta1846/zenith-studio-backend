@@ -3,3 +3,4 @@
 /middlewares/uploads
 /receipts
 /uploads
+.env
