@@ -520,16 +520,27 @@ export const getAllUsersWithOrders = async (req, res) => {
       users.map(async (user) => {
         const orders = await Order.find({ email: user.email });
         
-        // Calculate payment summaries
+        // Calculate payment summaries using the helper function
         const totalOrders = orders.length;
-        const totalAmount = orders.reduce((sum, order) => sum + (order.priceDetails?.total || 0), 0);
-        const totalPaid = orders.reduce((sum, order) => {
-          const paid = (order.priceDetails?.advanceAmount || 0) + (order.priceDetails?.cashPayment || 0);
-          return sum + paid;
-        }, 0);
-        const totalDues = totalAmount - totalPaid;
-        const pendingOrders = orders.filter(order => order.paymentStatus === 'Pending').length;
-        const completedOrders = orders.filter(order => order.paymentStatus === 'Paid').length;
+        let totalAmount = 0;
+        let totalPaid = 0;
+        let totalDues = 0;
+        let pendingOrders = 0;
+        let completedOrders = 0;
+
+        orders.forEach(order => {
+          const details = calculatePaymentDetails(order);
+          
+          totalAmount += details.totalAmount;
+          totalPaid += details.totalPaid;
+          totalDues += details.dues;
+          
+          if (details.paymentStatus === 'Pending') {
+            pendingOrders++;
+          } else if (details.paymentStatus === 'Paid' || details.paymentStatus === 'Done') {
+            completedOrders++;
+          }
+        });
 
         return {
           ...user.toObject(),
@@ -559,21 +570,17 @@ export const getUserOrdersWithPayments = async (req, res) => {
     const orders = await Order.find({ email }).sort({ createdAt: -1 });
     
     const ordersWithPaymentDetails = orders.map(order => {
-      const totalAmount = order.priceDetails?.total || 0;
-      const advanceAmount = order.priceDetails?.advanceAmount || 0;
-      const cashPayment = order.priceDetails?.cashPayment || 0;
-      const totalPaid = advanceAmount + cashPayment;
-      const dues = Math.max(totalAmount - totalPaid, 0);
+      const details = calculatePaymentDetails(order);
       
       return {
         ...order.toObject(),
         paymentBreakdown: {
-          totalAmount,
-          advanceAmount,
-          cashPayment,
-          totalPaid,
-          dues,
-          paymentStatus: order.paymentStatus
+          totalAmount: details.totalAmount,
+          advanceAmount: details.advanceAmount,
+          cashPayment: details.cashPayment,
+          totalPaid: details.totalPaid,
+          dues: details.dues,
+          paymentStatus: details.paymentStatus
         }
       };
     });
