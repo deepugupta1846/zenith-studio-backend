@@ -633,27 +633,73 @@ export const updateCashPayment = async (req, res) => {
   }
 };
 
+// Helper function to calculate payment details (same as frontend)
+const calculatePaymentDetails = (order) => {
+  const paymentStatus = order.paymentBreakdown?.paymentStatus || order.paymentStatus;
+  const totalAmount = order.paymentBreakdown?.totalAmount || order.priceDetails?.total || 0;
+  const advanceAmount = order.paymentBreakdown?.advanceAmount || order.priceDetails?.advanceAmount || 0;
+  const cashPayment = order.paymentBreakdown?.cashPayment || order.priceDetails?.cashPayment || 0;
+  
+  // Calculate total paid amount based on payment status
+  let totalPaid;
+  if (paymentStatus === 'Paid' || paymentStatus === 'Done') {
+    // If order is paid, totalPaid should be equal to totalAmount
+    totalPaid = totalAmount;
+  } else {
+    // For pending orders, totalPaid is the sum of advance and cash payments
+    totalPaid = advanceAmount + cashPayment;
+  }
+  
+  // Calculate dues based on payment status
+  const dues = (paymentStatus === 'Paid' || paymentStatus === 'Done') ? 0 : totalAmount - totalPaid;
+  
+  return {
+    paymentStatus,
+    totalAmount,
+    advanceAmount,
+    cashPayment,
+    dues,
+    totalPaid,
+    isFullyPaid: paymentStatus === 'Paid' || paymentStatus === 'Done' || dues <= 0
+  };
+};
+
 // Get overall payment statistics
 export const getPaymentStatistics = async (req, res) => {
   try {
     const orders = await Order.find();
     
+    let totalRevenue = 0;
+    let totalPaid = 0;
+    let totalDues = 0;
+    let pendingOrders = 0;
+    let paidOrders = 0;
+
+    // Calculate statistics using the helper function
+    orders.forEach(order => {
+      const details = calculatePaymentDetails(order);
+      
+      totalRevenue += details.totalAmount;
+      totalPaid += details.totalPaid;
+      totalDues += details.dues;
+      
+      if (details.paymentStatus === 'Pending') {
+        pendingOrders++;
+      } else if (details.paymentStatus === 'Paid' || details.paymentStatus === 'Done') {
+        paidOrders++;
+      }
+    });
+    
     const stats = {
       totalOrders: orders.length,
-      totalRevenue: orders.reduce((sum, order) => sum + (order.priceDetails?.total || 0), 0),
-      totalPaid: orders.reduce((sum, order) => {
-        const paid = (order.priceDetails?.advanceAmount || 0) + (order.priceDetails?.cashPayment || 0);
-        return sum + paid;
-      }, 0),
-      totalDues: 0,
-      pendingOrders: orders.filter(order => order.paymentStatus === 'Pending').length,
-      paidOrders: orders.filter(order => order.paymentStatus === 'Paid').length,
+      totalRevenue,
+      totalPaid,
+      totalDues,
+      pendingOrders,
+      paidOrders,
       paymentMethods: {},
       monthlyStats: {}
     };
-
-    // Calculate total dues
-    stats.totalDues = stats.totalRevenue - stats.totalPaid;
 
     // Payment method breakdown
     orders.forEach(order => {
@@ -663,6 +709,7 @@ export const getPaymentStatistics = async (req, res) => {
 
     // Monthly statistics
     orders.forEach(order => {
+      const details = calculatePaymentDetails(order);
       const month = new Date(order.createdAt).toLocaleString('default', { month: 'long', year: 'numeric' });
       if (!stats.monthlyStats[month]) {
         stats.monthlyStats[month] = {
@@ -672,8 +719,8 @@ export const getPaymentStatistics = async (req, res) => {
         };
       }
       stats.monthlyStats[month].orders++;
-      stats.monthlyStats[month].revenue += order.priceDetails?.total || 0;
-      stats.monthlyStats[month].paid += (order.priceDetails?.advanceAmount || 0) + (order.priceDetails?.cashPayment || 0);
+      stats.monthlyStats[month].revenue += details.totalAmount;
+      stats.monthlyStats[month].paid += details.totalPaid;
     });
 
     res.status(200).json({ success: true, statistics: stats });
