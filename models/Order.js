@@ -60,6 +60,9 @@ const orderSchema = new mongoose.Schema(
       enum: ['Pending', 'In Progress', 'Completed', 'Delivered', 'Cancelled'],
       default: 'Pending'
     },
+    orderStatusUpdatedAt: {
+      type: Date
+    },
     sheets: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
     serialNo: { type: String, default:"ZN-2025-0000"},
