@@ -652,6 +652,8 @@ const calculatePaymentDetails = (order) => {
   const totalAmount = order.paymentBreakdown?.totalAmount || order.priceDetails?.total || 0;
   const advanceAmount = order.paymentBreakdown?.advanceAmount || order.priceDetails?.advanceAmount || 0;
   const cashPayment = order.paymentBreakdown?.cashPayment || order.priceDetails?.cashPayment || 0;
+  const counterUpiPayment = order.paymentBreakdown?.counterUpiPayment || order.priceDetails?.counterUpiPayment || 0;
+  const counterUpiPaymentDate = order.paymentBreakdown?.counterUpiPaymentDate || order.priceDetails?.counterUpiPaymentDate;
   
   // Calculate total paid amount based on payment status
   let totalPaid;
@@ -659,8 +661,8 @@ const calculatePaymentDetails = (order) => {
     // If order is paid, totalPaid should be equal to totalAmount
     totalPaid = totalAmount;
   } else {
-    // For pending orders, totalPaid is the sum of advance and cash payments
-    totalPaid = advanceAmount + cashPayment;
+    // For pending orders, totalPaid is the sum of all payments
+    totalPaid = advanceAmount + cashPayment + counterUpiPayment;
   }
   
   // Calculate dues based on payment status
@@ -671,6 +673,8 @@ const calculatePaymentDetails = (order) => {
     totalAmount,
     advanceAmount,
     cashPayment,
+    counterUpiPayment,
+    counterUpiPaymentDate,
     dues,
     totalPaid,
     isFullyPaid: paymentStatus === 'Paid' || paymentStatus === 'Done' || dues <= 0
