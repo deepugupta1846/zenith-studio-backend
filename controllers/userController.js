@@ -404,7 +404,7 @@ export const getUserDetails = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const { _id, name, email, mobileNumber, shopName, licenseKey, userType, active } = req.user;
+    const { _id, name, email, mobileNumber, shopName, licenseKey, userType, active, isPremium } = req.user;
 
     res.status(200).json({
       _id,
@@ -415,6 +415,7 @@ export const getUserDetails = async (req, res) => {
       licenseKey,
       userType,
       active,
+      isPremium
     });
   } catch (error) {
     console.error("Error fetching user details:", error);
@@ -573,5 +574,48 @@ export const deleteUser = async (req, res) => {
   } catch (err) {
     console.error("Delete user error:", err);
     res.status(500).json({ message: "Failed to delete user" });
+  }
+};
+
+// Update user premium status
+export const updateUserPremiumStatus = async (req, res) => {
+  try {
+    const { userId, isPremium } = req.body;
+    
+    if (!userId || typeof isPremium !== 'boolean') {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User ID and premium status are required" 
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { isPremium },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      message: `User premium status updated to ${isPremium ? 'Premium' : 'Standard'}`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isPremium: user.isPremium
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      success: false, 
+      error: err.message 
+    });
   }
 };

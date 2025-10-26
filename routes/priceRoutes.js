@@ -7,6 +7,8 @@ import {
   getPriceById,
   updatePrice,
   deletePrice,
+  updatePremiumPrices,
+  getAllPricesWithPremium,
 } from "../controllers/priceController.js";
 
 const router = express.Router();
@@ -25,5 +27,11 @@ router.put("/:id", updatePrice);
 
 // @route   DELETE /api/prices/:id
 router.delete("/:id", deletePrice);
+
+// @route   PUT /api/prices/:id/premium
+router.put("/:id/premium", updatePremiumPrices);
+
+// @route   GET /api/prices/premium
+router.get("/premium", getAllPricesWithPremium);
 
 export default router;

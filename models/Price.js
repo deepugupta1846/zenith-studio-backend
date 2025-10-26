@@ -63,6 +63,43 @@ const priceSchema = new mongoose.Schema({
     min: 0,
     default: 110,
   },
+  // Premium pricing fields
+  premiumGlossyPaperPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  premiumGlossySheetPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  premiumNtrPaperPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  premiumNtrSheetPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  premiumBindingPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  premiumBagPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
 }, {
   timestamps: true,
 });

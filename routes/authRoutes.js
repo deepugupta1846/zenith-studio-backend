@@ -13,6 +13,7 @@ import {
   sendForgotPasswordOtp,
   deleteUser,
   updateProfile,
+  updateUserPremiumStatus,
 } from "../controllers/userController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -31,5 +32,6 @@ router.post("/send-reset-otp", sendForgotPasswordOtp);
 router.post("/reset-password", resetPassword);
 router.delete("/user/:id", protect, deleteUser);
 router.put("/user", protect, updateProfile);
+router.put("/user/premium-status", protect, updateUserPremiumStatus);
 
 export default router;
