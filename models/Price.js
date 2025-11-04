@@ -11,6 +11,13 @@ const priceSchema = new mongoose.Schema({
     enum: ["user", "admin", "retailer", "professional", "Professional"],
     required: true,
   },
+  // User-specific pricing (optional)
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: false,
+    default: null,
+  },
   paperSize: {
     type: String,
     required: true,
@@ -95,6 +102,49 @@ const priceSchema = new mongoose.Schema({
     default: 0,
   },
   premiumBagPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  // User-specific pricing fields
+  userGlossyPaperPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  userGlossySheetPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  userNtrPaperPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  userNtrSheetPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  userBindingPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  userBagPrice: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: 0,
+  },
+  userDeliveryCharge: {
     type: Number,
     required: false,
     min: 0,
