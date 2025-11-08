@@ -11,9 +11,8 @@ export const createPrice = async (req, res) => {
       // Premium pricing fields
       premiumGlossyPaperPrice, premiumGlossySheetPrice, premiumNtrPaperPrice, 
       premiumNtrSheetPrice, premiumBindingPrice, premiumBagPrice,
-      // User-specific pricing fields
-      userId, userGlossyPaperPrice, userGlossySheetPrice, userNtrPaperPrice,
-      userNtrSheetPrice, userBindingPrice, userBagPrice, userDeliveryCharge
+      // User-specific pricing as array
+      userSpecificPrices
     } = req.body;
     
     console.log("Creating price entry with data:", req.body)
@@ -22,19 +21,26 @@ export const createPrice = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check if user-specific price already exists for this user and combination
-    if (userId) {
-      const existingUserPrice = await Price.findOne({ 
-        albumType, 
-        userType, 
-        paperSize, 
-        bagType, 
-        userId 
-      });
-      if (existingUserPrice) {
-        return res.status(400).json({ 
-          message: "User-specific price already exists for this combination" 
-        });
+    // Validate and clean userSpecificPrices array
+    const cleanedUserSpecificPrices = [];
+    if (userSpecificPrices && Array.isArray(userSpecificPrices)) {
+      for (const userPrice of userSpecificPrices) {
+        if (userPrice.userId && (
+          userPrice.glossyPaperPrice > 0 || userPrice.glossySheetPrice > 0 ||
+          userPrice.ntrPaperPrice > 0 || userPrice.ntrSheetPrice > 0 ||
+          userPrice.bindingPrice > 0 || userPrice.bagPrice > 0 || userPrice.deliveryCharge > 0
+        )) {
+          cleanedUserSpecificPrices.push({
+            userId: userPrice.userId,
+            glossyPaperPrice: userPrice.glossyPaperPrice || 0,
+            glossySheetPrice: userPrice.glossySheetPrice || 0,
+            ntrPaperPrice: userPrice.ntrPaperPrice || 0,
+            ntrSheetPrice: userPrice.ntrSheetPrice || 0,
+            bindingPrice: userPrice.bindingPrice || 0,
+            bagPrice: userPrice.bagPrice || 0,
+            deliveryCharge: userPrice.deliveryCharge || 0,
+          });
+        }
       }
     }
 
@@ -58,17 +64,12 @@ export const createPrice = async (req, res) => {
       premiumNtrSheetPrice: premiumNtrSheetPrice || 0,
       premiumBindingPrice: premiumBindingPrice || 0,
       premiumBagPrice: premiumBagPrice || 0,
-      // User-specific pricing fields
-      userId: userId || null,
-      userGlossyPaperPrice: userGlossyPaperPrice || 0,
-      userGlossySheetPrice: userGlossySheetPrice || 0,
-      userNtrPaperPrice: userNtrPaperPrice || 0,
-      userNtrSheetPrice: userNtrSheetPrice || 0,
-      userBindingPrice: userBindingPrice || 0,
-      userBagPrice: userBagPrice || 0,
-      userDeliveryCharge: userDeliveryCharge || 0,
+      // User-specific pricing as array
+      userSpecificPrices: cleanedUserSpecificPrices,
     });
 
+    // Populate userSpecificPrices.userId before sending response
+    await price.populate('userSpecificPrices.userId', 'name email userType');
     res.status(201).json(price);
   } catch (error) {
     console.error(error);
@@ -80,8 +81,8 @@ export const createPrice = async (req, res) => {
 // @route   GET /api/prices
 export const getAllPrices = async (req, res) => {
   try {
-    const prices = await Price.find()
-      .populate('userId', 'name email userType')
+    const prices = await Price.find({ userId: null }) // Only get base prices (no userId)
+      .populate('userSpecificPrices.userId', 'name email userType')
       .sort({ userType: 1, albumType: 1 });
     res.json(prices);
   } catch (error) {
@@ -94,7 +95,8 @@ export const getAllPrices = async (req, res) => {
 // @route   GET /api/prices/:id
 export const getPriceById = async (req, res) => {
   try {
-    const price = await Price.findById(req.params.id);
+    const price = await Price.findById(req.params.id)
+      .populate('userSpecificPrices.userId', 'name email userType');
     if (!price) return res.status(404).json({ message: "Price not found" });
     res.json(price);
   } catch (error) {
@@ -108,21 +110,68 @@ export const getPriceById = async (req, res) => {
 // @access  Admin
 export const updatePrice = async (req, res) => {
   try {
-    const updates = req.body;
+    const { userSpecificPrices, ...otherUpdates } = req.body;
     const price = await Price.findById(req.params.id);
 
     if (!price) {
       return res.status(404).json({ message: "Price not found" });
     }
 
-    // Apply updates dynamically
-    for (let key in updates) {
-      if (updates[key] !== undefined) {
-        price[key] = updates[key];
+    // Apply updates dynamically (except userSpecificPrices)
+    for (let key in otherUpdates) {
+      if (otherUpdates[key] !== undefined && key !== 'userSpecificPrices') {
+        price[key] = otherUpdates[key];
       }
     }
 
+    // Handle userSpecificPrices array separately
+    if (userSpecificPrices !== undefined) {
+      const cleanedUserSpecificPrices = [];
+      if (Array.isArray(userSpecificPrices)) {
+        for (const userPrice of userSpecificPrices) {
+          if (userPrice.userId && (
+            userPrice.glossyPaperPrice > 0 || userPrice.glossySheetPrice > 0 ||
+            userPrice.ntrPaperPrice > 0 || userPrice.ntrSheetPrice > 0 ||
+            userPrice.bindingPrice > 0 || userPrice.bagPrice > 0 || userPrice.deliveryCharge > 0
+          )) {
+            // Check if this user already exists in the array
+            const existingIndex = cleanedUserSpecificPrices.findIndex(
+              up => up.userId && up.userId.toString() === userPrice.userId.toString()
+            );
+            
+            if (existingIndex >= 0) {
+              // Update existing user-specific price
+              cleanedUserSpecificPrices[existingIndex] = {
+                userId: userPrice.userId,
+                glossyPaperPrice: userPrice.glossyPaperPrice || 0,
+                glossySheetPrice: userPrice.glossySheetPrice || 0,
+                ntrPaperPrice: userPrice.ntrPaperPrice || 0,
+                ntrSheetPrice: userPrice.ntrSheetPrice || 0,
+                bindingPrice: userPrice.bindingPrice || 0,
+                bagPrice: userPrice.bagPrice || 0,
+                deliveryCharge: userPrice.deliveryCharge || 0,
+              };
+            } else {
+              // Add new user-specific price
+              cleanedUserSpecificPrices.push({
+                userId: userPrice.userId,
+                glossyPaperPrice: userPrice.glossyPaperPrice || 0,
+                glossySheetPrice: userPrice.glossySheetPrice || 0,
+                ntrPaperPrice: userPrice.ntrPaperPrice || 0,
+                ntrSheetPrice: userPrice.ntrSheetPrice || 0,
+                bindingPrice: userPrice.bindingPrice || 0,
+                bagPrice: userPrice.bagPrice || 0,
+                deliveryCharge: userPrice.deliveryCharge || 0,
+              });
+            }
+          }
+        }
+      }
+      price.userSpecificPrices = cleanedUserSpecificPrices;
+    }
+
     const updated = await price.save();
+    await updated.populate('userSpecificPrices.userId', 'name email userType');
     res.json(updated);
   } catch (error) {
     console.error("Update Price Error:", error);

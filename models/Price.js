@@ -61,7 +61,6 @@ const priceSchema = new mongoose.Schema({
   },
   serviceTax: {
     type: Number,
-    required: true,
     min: 0,
   },
   deliveryCharge: {
@@ -150,6 +149,49 @@ const priceSchema = new mongoose.Schema({
     min: 0,
     default: 0,
   },
+  // User-specific pricing as an array of objects
+  userSpecificPrices: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    glossyPaperPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    glossySheetPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    ntrPaperPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    ntrSheetPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    bindingPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    bagPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+    deliveryCharge: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+  }],
 }, {
   timestamps: true,
 });
