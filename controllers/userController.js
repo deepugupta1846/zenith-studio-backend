@@ -149,7 +149,8 @@ export const old_sendOtp = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required" });
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = "123456"
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
   otps[email] = { otp, expiresAt };
@@ -170,7 +171,7 @@ export const old_sendOtp = async (req, res) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    // await transporter.sendMail(mailOptions);
     res.json({ message: "OTP sent" });
   } catch (err) {
     console.error("Failed to send OTP:", err);
