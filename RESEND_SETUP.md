@@ -134,3 +134,6 @@ RESEND_API_KEY=re_your_key_here node test-resend.js
 5. **Set up webhooks** (optional)
 
 Your MediGo email system will be powered by Resend! 🚀
+
+
+
