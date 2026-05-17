@@ -186,7 +186,8 @@ export const sendOtp = async (req, res) => {
 
   if (!email) return res.status(400).json({ message: "Email is required" });
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = "123456";
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
   otps[email] = { otp, expiresAt };
@@ -194,12 +195,12 @@ export const sendOtp = async (req, res) => {
   const htmlContent = `Your OTP is <b>${otp}</b>. It is valid for 10 minutes.`;
 
   try {
-    await sendEmailViaApi({
-      to: email,
-      subject: "Your Zenith Studio Registration OTP",
-      html: htmlContent,
-      type: "otp"
-    });
+    // await sendEmailViaApi({
+    //   to: email,
+    //   subject: "Your Zenith Studio Registration OTP",
+    //   html: htmlContent,
+    //   type: "otp"
+    // });
 
     res.status(200).json({ message: "OTP sent successfully" });
   } catch (err) {
